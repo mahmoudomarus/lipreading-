@@ -22,4 +22,4 @@
 | MP4 export fails | Check FFmpeg availability and clip length/size. The original browser recording remains available; verify on the target phone |
 | Background service not running after reboot/sleep | It is a detached process, not a login service, and it does not prevent sleep. Start it again and use the new link |
 
-Before opening an issue, include OS, Python/library versions, phone/browser, the command used and a minimal reproduction. Remove access tokens, API keys, private URLs, transcripts, database files and personal footage from any logs or screenshots you share.
+Before opening an issue, include OS, Python/library versions, phone/browser, the command used and a minimal reproduction. Remove access tokens, API keys, private URLs, transcripts, database files and personal footage from any diagnostic material you share.

@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-Audit and freeze the existing camera-to-text implementation before further recognition work. Fix evaluation to score assembled turns, separate natural endpointing, retain uncertainty/latency evidence and expose paired regressions; add split checks, critical-span proxies and isolated command-intent evaluation. Add a disabled-by-default existing-hold preservation experiment (`LIPREAD_PRESERVE_HOLDS=1`). Existing diagnostic transcripts are unchanged; no held-out recognition improvement or calibrated confidence is claimed. See `docs/RECOGNITION_AUDIT.md` and `docs/EVALUATION.md`.
+Correct action previews and reject malformed camera control values. Preserve drafts, alternatives and review holds across visual turns. Extract startup-owned runtime resources and a testable camera session. Enforce lint in CI, retain failed plans, account for research in queue bounds and report launcher timeouts as failures. See `docs/BASELINE.md` for repeated timing measurements and `docs/RECORDING.md` for the first labeled evaluation protocol.
+
+Add evaluation of assembled turns, natural endpointing, paired regressions, split checks, critical-span proxies and isolated command-intent plans. Add a disabled-by-default hold-preservation experiment (`LIPREAD_PRESERVE_HOLDS=1`). See `docs/BASELINE.md` and `docs/EVALUATION.md`.
 
 Add local lip-shape turn detection, pause-based utterance assembly, interruption of in-flight requests, stale-turn rejection, cited web research, sandboxed page cards, and downloadable Markdown drafts. See `docs/TURN_TAKING.md` for implemented behavior and limits.
 
@@ -11,7 +13,7 @@ Prevent empty visual drafts from triggering fluent beam-decoder guesses; hold re
 
 Live conversation sends finalized visual predictions to the agent automatically, with optional manual review. Automatic turns retain provenance and idempotency IDs; drafts are excluded. Notes and timers still require confirmation. Poll responses preserve recent/completed turns rather than rolling the UI backward.
 
-## 0.1.0 — 2026-11-01
+## 0.1.0 on 2026-11-01
 
 Initial public research prototype: phone-camera visual captions, reviewed text requests, replaceable text providers, local note/timer/calculator tools, durable jobs and receipts, and a recording studio. Includes protocol/agent/UI/export tests, source packaging, asset verification, setup documentation, research findings, and a contribution roadmap.
 

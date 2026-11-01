@@ -1,9 +1,9 @@
 """Conservative abstention heuristics, not a calibrated recognition confidence score."""
 
-from collections import Counter, deque
-from difflib import SequenceMatcher
 import math
 import re
+from collections import Counter, deque
+from difflib import SequenceMatcher
 
 
 def words(text):

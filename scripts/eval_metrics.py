@@ -2,9 +2,9 @@
 
 import hashlib
 import json
+import math
 import re
 import statistics
-import math
 from collections import Counter
 
 
@@ -62,7 +62,7 @@ def score(reference, prediction, critical_spans=()):
         if not phrase:
             raise ValueError("A critical span cannot be empty.")
 
-        def count(text):
+        def count(text, phrase=phrase):
             seq = tokens(text)
             return sum(
                 seq[i : i + len(phrase)] == phrase for i in range(len(seq) - len(phrase) + 1)
@@ -84,7 +84,8 @@ def action_match(expected, actual):
     if len(expected) != len(actual):
         return False
     return all(
-        all(action.get(k) == v for k, v in label.items()) for label, action in zip(expected, actual)
+        all(action.get(k) == v for k, v in label.items())
+        for label, action in zip(expected, actual, strict=True)
     )
 
 

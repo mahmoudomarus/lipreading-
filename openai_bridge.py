@@ -111,7 +111,9 @@ class OpenAIBridge:
             "You have not seen the video and cannot verify the actual words. "
             "Choose c0 when there is no clear contextual reason to prefer another candidate. "
             "Return only the candidate ID and a brief contextual reason; never invent or combine readings.",
-            "input": json.dumps({"context": context, "candidates": dict(zip(names, candidates))}),
+            "input": json.dumps(
+                {"context": context, "candidates": dict(zip(names, candidates, strict=True))}
+            ),
             "text": {
                 "format": {
                     "type": "json_schema",
@@ -237,7 +239,10 @@ class OpenAIBridge:
             ) from None
         if not chunks:
             raise BridgeError("OpenAI returned no speech audio.")
-        normalized = lambda value: re.findall(r"[a-z0-9]+(?:'[a-z]+)?", value.lower())
+
+        def normalized(value):
+            return re.findall(r"[a-z0-9]+(?:'[a-z]+)?", value.lower())
+
         if not spoken or normalized(spoken) != normalized(text):
             raise BridgeError(
                 "The generated voice did not match the caption, so it was not played."

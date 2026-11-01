@@ -56,10 +56,11 @@ The allowlisted archive in `outputs/` omits runtime data, `.env`, model weights,
 Python uses Ruff 0.15.10 and frontend source uses the locked Prettier version. These are development-only dependencies:
 
 ```sh
-.venv/bin/python -m pip install -r requirements-dev.txt
-.venv/bin/ruff format agent.py engine.py recognition_guard.py turn_taking.py web_results.py provider.py server.py openai_bridge.py video_export.py scripts tests
+.venv/bin/python -m pip install -c constraints-test.txt -r requirements-dev.txt
+.venv/bin/ruff check .
+.venv/bin/ruff format .
 npm --prefix phone-app ci
 npm --prefix phone-app run format
 ```
 
-CI checks formatting and tests. Use `format:check` or `ruff format --check` to verify without rewriting files. Runtime use still needs no npm installation.
+CI enforces E, F, B and I lint rules, formatting and tests. Long prompt and SQL literals use the formatter instead of E501. Use `format:check` or `ruff format --check .` to verify without rewriting files. The lightweight environment uses `constraints-test.txt`, captured from the tested Python 3.11 environment. These constraints do not lock platform-specific model dependencies. Runtime use still needs no npm installation.

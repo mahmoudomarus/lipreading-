@@ -7,6 +7,7 @@ import {
   displayText,
   upsertCaption,
   compareWords,
+  readingCandidates,
 } from './core.js';
 import { createStudio, createAudioEngine } from './studio.js';
 
@@ -644,7 +645,8 @@ function renderCaptions() {
     tools.className = 'entry-tools';
     const assist = document.createElement('button');
     assist.textContent = assistBusy.has(entry.id) ? 'Selecting…' : 'Compare readings';
-    assist.disabled = !providerReady || assistBusy.has(entry.id);
+    assist.disabled =
+      !providerReady || assistBusy.has(entry.id) || readingCandidates(entry).length < 2;
     assist.onclick = () => assistEntry(entry);
     const voice = document.createElement('button');
     voice.textContent = 'AI voice ↗';
@@ -947,10 +949,14 @@ $('assist-toggle').addEventListener('change', () => {
 });
 async function assistEntry(entry, automatic = false) {
   if (!entry || !providerReady || assistBusy.has(entry.id)) return;
+  const candidates = readingCandidates(entry);
+  if (candidates.length < 2) {
+    if (automatic && $('auto-voice').checked) playEntry(entry);
+    return;
+  }
   assistBusy.add(entry.id);
   renderCaptions();
   try {
-    const candidates = [entry.text, ...(entry.alternatives || [])].slice(0, 4);
     const previous = entries
       .slice(
         0,

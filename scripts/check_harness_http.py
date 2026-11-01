@@ -2,20 +2,20 @@
 
 import argparse
 import asyncio
-import json
 import sys
 import time
 import uuid
 from pathlib import Path
-from urllib.parse import urlsplit
+
 import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from agent import AgentStore
 
 
 async def main():
+    from agent import AgentStore
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("server", nargs="?", default="http://127.0.0.1:8765")
     parser.add_argument(

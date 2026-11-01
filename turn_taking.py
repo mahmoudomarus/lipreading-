@@ -1,7 +1,7 @@
 """Visual activity hysteresis and multi-window utterance assembly. No audio input."""
 
-from collections import deque
 import math
+from collections import deque
 
 
 class LipActivity:
@@ -37,7 +37,7 @@ class LipActivity:
                 self.last_motion = timestamp
             movement = 0.0
         else:
-            movement = max(abs(a - b) for a, b in zip(shape, self.previous))
+            movement = max(abs(a - b) for a, b in zip(shape, self.previous, strict=True))
             self.previous = tuple(shape)
         moving = movement >= self.threshold
         self.motions.append(moving)
@@ -99,10 +99,17 @@ class Utterances:
         reason = next((p.get("review_reason") for p in parts if p.get("auto_send") is False), None)
         if reason is None and any(p.get("auto_send") is False for p in parts):
             reason = "Part of this request needs correction."
-        return {
+        prefix = " ".join(p["text"].strip() for p in parts[:-1])
+        alternatives = []
+        for candidate in parts[-1].get("alternatives", []):
+            combined = " ".join(s for s in [prefix, candidate.strip()] if s)
+            if combined and combined != text and combined not in alternatives:
+                alternatives.append(combined)
+        result = {
             "type": "utterance",
             "turn_id": turn_id,
             "text": text,
+            "alternatives": alternatives[:2],
             "capture_end": endpoint,
             "duration": round(max(0, endpoint - turn["start"]), 2),
             "auto_send": reason is None,
@@ -110,6 +117,10 @@ class Utterances:
             "review_reason": reason,
             "processing_seconds": round(sum(p.get("processing_seconds", 0) for p in parts), 2),
         }
+        # Do not manufacture draft evidence when a producer did not supply it.
+        if all(isinstance(p.get("draft_text"), str) for p in parts):
+            result["draft_text"] = " ".join(p["draft_text"].strip() for p in parts)
+        return result
 
 
 class MouthMonitor:

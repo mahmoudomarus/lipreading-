@@ -20,10 +20,11 @@ class HoldExperimentTests(unittest.TestCase):
         )
         return turns.finish(1, 4)
 
-    def test_baseline_reproduces_lost_hold_and_optional_change_preserves_it(self):
+    def test_propagated_draft_preserves_disagreement_hold_with_flag_off(self):
         result = self.assembled()
         self.assertFalse(result["auto_send"])
-        self.assertTrue(RecognitionGuard().assess(result, 4)["auto_send"])
+        self.assertEqual(result["draft_text"], "no")
+        self.assertFalse(RecognitionGuard().assess(result, 4)["auto_send"])
         changed = RecognitionGuard(preserve_holds=True).assess(result, 4)
         self.assertFalse(changed["auto_send"])
         self.assertEqual(changed["review_reason"], result["review_reason"])

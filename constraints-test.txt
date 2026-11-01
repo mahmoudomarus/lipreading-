@@ -1,0 +1,23 @@
+# Tested Python 3.11 lightweight environment. Resolve full model dependencies separately.
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.16.0
+certifi==2026.10.23
+fastapi==0.162.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.20
+numpy==2.4.6
+opencv-python-headless==4.14.0.94
+opentelemetry-api==1.45.2
+pillow==12.3.0
+pip==24.0
+pydantic==2.14.2
+pydantic_core==2.50.2
+ruff==0.15.10
+setuptools==65.5.0
+starlette==1.10.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+websockets==15.0.1

@@ -11,7 +11,7 @@ failed = False
 
 def check(label, ok, detail=""):
     global failed
-    print(("OK   " if ok else "FAIL ") + label + (" — " + detail if detail else ""))
+    print(("OK   " if ok else "FAIL ") + label + (": " + detail if detail else ""))
     failed |= not ok
 
 

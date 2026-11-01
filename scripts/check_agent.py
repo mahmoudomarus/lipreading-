@@ -10,11 +10,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from agent import AgentStore
-from provider import TextProvider
 
 
 async def main():
+    from agent import AgentStore
+    from provider import TextProvider
+
     provider = TextProvider()
     if not provider.enabled:
         sys.exit("No server-side model configured.")

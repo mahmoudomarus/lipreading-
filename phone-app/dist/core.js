@@ -26,6 +26,19 @@ export function transcriptText(entries) {
   return entries.map((entry) => entry.text).join('\n\n');
 }
 
+export function readingCandidates(entry) {
+  const text = entry?.text?.trim();
+  if (!text || text.length > 600) return [];
+  return [
+    ...new Set(
+      [text, ...(entry.alternatives || [])]
+        .filter((candidate) => typeof candidate === 'string')
+        .map((candidate) => candidate.trim())
+        .filter((candidate) => candidate && candidate.length <= 600),
+    ),
+  ].slice(0, 4);
+}
+
 export function displayText(text) {
   const sentence = text.toLowerCase().replace(/\bi\b/g, 'I');
   return sentence.charAt(0).toUpperCase() + sentence.slice(1);

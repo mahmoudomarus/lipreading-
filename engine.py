@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 import time
-import logging
 from pathlib import Path
 
 import cv2
 import numpy as np
+
 from recognition_guard import review_reason
 
 ROOT = Path(__file__).resolve().parent
@@ -36,8 +37,9 @@ def decode_frame(payload: bytes):
     if not np.isfinite(timestamp) or timestamp < 0:
         raise CaptureError("Invalid camera timestamp.")
     # Inspect dimensions before decompression to bound allocation.
-    from PIL import Image
     import io
+
+    from PIL import Image
 
     try:
         with Image.open(io.BytesIO(payload[8:])) as image:
@@ -83,15 +85,15 @@ def mouth_motion(patches):
 
 class LipReader:
     def __init__(self):
-        import torch
         import mediapipe as mp
+        import torch
         from mediapipe.tasks import python
         from mediapipe.tasks.python import vision
 
         sys.path.insert(0, str(VENDOR))
-        from pipelines.model import AVSR
-        from pipelines.detectors.mediapipe.video_process import VideoProcess
         from pipelines.data.transforms import VideoTransform
+        from pipelines.detectors.mediapipe.video_process import VideoProcess
+        from pipelines.model import AVSR
 
         torch.set_num_threads(int(os.getenv("LIPREAD_THREADS", "4")))
         self.torch, self.mp = torch, mp

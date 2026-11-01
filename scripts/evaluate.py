@@ -12,7 +12,6 @@ from pathlib import Path
 import cv2
 import httpx
 import websockets
-
 from eval_metrics import action_match, compare, score, selected_events, summarize, tokens
 
 ROOT = Path(__file__).resolve().parents[1]

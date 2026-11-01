@@ -22,7 +22,7 @@ The concept is a silent interface to useful software. The bottleneck is trustwor
 
 ## Larger research contributions
 
-These are future research directions, not the current build spec. Preserve the working architecture; a new model/framework needs a measured gap and a separate controlled comparison. [Current priorities and optional patch](RECOGNITION_AUDIT.md).
+These are future research directions. Preserve the working architecture; a new model/framework needs a measured gap and a separate controlled comparison. [Baseline and current evidence](BASELINE.md).
 
 A streaming model is not obtained by merely slicing an offline model into smaller calls. Provide its code/checkpoint provenance, licensing terms, causal/chunk state behavior, context/latency definition and a comparison on identical held-out clips. Do not quote audio-visual benchmark numbers as silent-video results.
 

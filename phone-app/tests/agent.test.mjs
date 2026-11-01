@@ -1,7 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { agentSummary, receiptText } from '../dist/agent-core.js';
+import { actionLabel, agentSummary, receiptText } from '../dist/agent-core.js';
+
+test('confirmation previews explicitly describe every backend tool', async () => {
+  const backend = await readFile(new URL('../../agent.py', import.meta.url), 'utf8');
+  const tools = [...backend.match(/TOOLS = \{([\s\S]*?)\n\}/)[1].matchAll(/"([a-z_]+)"/g)]
+    .map((m) => m[1])
+    .sort();
+  const labels = {
+    save_note: 'Save note: # Test',
+    start_timer: 'Start 30s timer · # Test',
+    calculate: 'Calculate 2+2',
+    list_notes: 'Read saved notes',
+    list_timers: 'Read timers',
+    research: 'Research: # Test',
+    open_page: 'Open page preview: # Test',
+    draft_document: 'Create document: Test',
+  };
+  assert.deepEqual(Object.keys(labels).sort(), tools);
+  for (const name of tools)
+    assert.equal(
+      actionLabel({ name, text: '# Test', seconds: 30, expression: '2+2' }),
+      labels[name],
+    );
+  assert.equal(actionLabel({ name: 'future_tool' }), 'Unknown action: future_tool');
+});
 
 test('action preview cannot be presented as an executed receipt', () => {
   const text = agentSummary({

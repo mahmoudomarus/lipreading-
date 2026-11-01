@@ -1,10 +1,11 @@
 """Small provider-neutral text adapter. Configuration and credentials stay in memory."""
 
 from __future__ import annotations
-import asyncio
+
 import json
 import os
 from urllib.parse import urlsplit
+
 import httpx
 
 

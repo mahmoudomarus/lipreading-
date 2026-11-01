@@ -2,3 +2,8 @@
 line-length = 100
 target-version = "py311"
 exclude = [".venv", ".venv-test", "vendor", "models", "outputs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
+# Long SQL, prompts and schema literals are wrapped by the formatter where possible.
+ignore = ["E501"]

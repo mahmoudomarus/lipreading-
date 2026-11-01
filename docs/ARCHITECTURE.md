@@ -1,84 +1,84 @@
 # Architecture and extension points
 
-## Repository map
+## Components
+
+| Responsibility | Module |
+| --- | --- |
+| App factory, HTTP, authentication, camera ownership | `server.py` |
+| Startup and shutdown resources | `runtime.py` |
+| Camera session state and scheduling | `stream_session.py` |
+| Bounded consume-once video buffer | `stream_buffer.py` |
+| Shared backend protocol and timing constants | `config.py` |
+| Visual encoder, CTC, beam decoding and framing feedback | `engine.py` |
+| Lip activity and utterance assembly | `turn_taking.py` |
+| Existing abstention and repetition heuristics | `recognition_guard.py` |
+| Structured text provider adapter | `provider.py` |
+| Durable jobs, validated tools and receipts | `agent.py` |
+| Cited report and public-link validation | `web_results.py` |
+| Optional speech and compatibility adapter | `openai_bridge.py` |
+| Recording conversion | `video_export.py` |
+| Buildless browser application | `phone-app/dist/` |
+
+`create_app(runtime_dir, load_models=...)` creates independent application state. Lifespan startup creates the app token, SQLite store, providers, locks and three single-thread executors. Importing `server` does not create a token, database or worker pools. Tests use temporary runtime directories and `load_models=False` with controlled recognition fixtures. Normal startup loads the pinned assets.
+
+## Camera and recognition
 
 ```text
-agent.py                  SQLite jobs, validated plans, local tools and receipts
-provider.py               Generic Responses / Chat-compatible text adapter
-engine.py                 Visual recognition, preprocessing and framing feedback
-recognition_guard.py      Uncalibrated abstention/repetition checks
-turn_taking.py            Lip-shape activity and utterance assembly
-web_results.py            Web citation and public-link validation
-server.py                 Authenticated HTTP + camera WebSocket; static assets
-openai_bridge.py          Optional legacy speech/candidate adapter
-video_export.py           Bounded FFmpeg conversion with temporary-file cleanup
-assets.json               Vendor revision and model asset hashes/sizes
-phone-app/dist/           Buildless HTML, CSS and JavaScript source
-phone-app/tests/          Node tests for pure helpers and UI bindings
-scripts/                  Launchers, diagnostics, evaluations and source packaging
-tests/                    Python unit and protocol tests; no weights needed
-docs/                     Setup, research, architecture and contribution roadmap
+Phone video without audio
+  -> timestamp plus JPEG over authenticated WebSocket
+  -> single-session lock -> StreamSession -> bounded StreamBuffer
+       -> framing executor -> QualityMonitor -> quality advice
+       -> lip-activity executor -> MouthMonitor -> visual turn boundaries
+       -> recognition executor, inference lock -> LipReader
+            -> resample -> align mouth crops -> encoder -> greedy CTC draft
+            -> attention/CTC/trained-LM beam -> best and alternatives
+  -> Utterances -> final text, draft evidence and bounded alternatives
+  -> existing guard decisions -> caption and eligible final request
 ```
 
-`dist/` is the maintained frontend source in this small prototype, not a generated framework bundle. There is no npm build step. Model files, downloaded vendor code, local data, and `.env` files are ignored. No hosting account configuration is required for the public repository.
+The browser paces distinct frames toward 25 FPS, resizes to 800 pixels and applies backpressure. Packets contain an eight-byte little-endian float64 capture timestamp and JPEG bytes. The backend validates size, dimensions and timing. Finalized frames are consumed once while later frames remain buffered. Protocol version and draft timing come from `config.py`; HTTP status and the connected event use the same version.
 
-## Recognition pipeline
+The recognizer repeatedly processes offline windows. The advice thresholds for face size and head angle are stricter than rejection thresholds so the UI can suggest improvements before capture fails. [Recognition limitations](../README.md#limitations).
 
-The phone requests video with `audio:false`, paces distinct sensor frames to 25 FPS without retiming them, encodes JPEGs up to 800 pixels on the long edge, and applies WebSocket backpressure. Binary packets consist of an 8-byte little-endian float64 capture timestamp in seconds followed by JPEG bytes. The first WebSocket message authenticates the session. Hostile sizes, unsupported image dimensions, slow delivery, and changed frame timing are rejected.
+Single-part turns retain their native alternatives. Multi-part turns keep earlier best readings and substitute only alternatives from the last part, with at most two distinct full-turn alternatives. Drafts are joined only when every part supplied real draft text. A held part keeps the complete turn held. Manual comparison uses the existing text selector and is disabled when no distinct supported candidate exists. Automatic selection is not enabled on assembled visual turns.
 
-The server keeps a bounded utterance buffer, resamples to 25 FPS while preserving elapsed time, detects/alines a face using MediaPipe and the upstream cropper, and normalizes mouth crops for Auto-AVSR. Cached detections are scoped to the capture session. CNN/Conformer features and CTC drafts are recomputed for growing windows. Full decoding refines the phrase on manual finish, a heuristic pause, or the window limit. Finalized frames are consumed once; new frames arriving during inference are retained.
-
-Empty visual drafts never trigger beam decoding. Exposure-normalized mouth-region motion rejects nearly static frames. Repeated 4-grams, implausible word rates, excessive beam expansion/disagreement, and near-duplicate long readings are held rather than auto-sent. These are conservative heuristics, not calibrated confidence; they can miss errors and reject valid speech.
-
-This is **windowed offline inference**, not a causal streaming model. Quality guidance measures framing, lighting, and motion. Neither it nor decoder alternatives are calibrated word confidence. Do not map similarity scores to a confidence percentage.
-
-## Agent pipeline and contracts
-
-`POST /api/agent/jobs` accepts a final-prediction, reviewed, or typed request plus a client UUID. It persists before responding; the asynchronous worker continues independently of the browser. The source is `lip_prediction` for automatic final camera turns, `reviewed_lips` for manual review, or `typed`. Frontend drafts are never submitted. Automatic turns are serialized and deduplicated per camera session/segment; retries retain their UUID. Live replies can be switched off. This source label is an application contract, not independent proof that recognition was correct.
-
-State transitions:
+## Agent state and execution
 
 ```text
-queued → thinking → completed                 # answer or read-only tools
-                  → review → completed        # write tools, after confirmation
-                           → cancelled
-                  → failed
+queued -> thinking -> completed                 answer or read-only tools
+                 -> researching -> completed   cited research
+                 -> review -> completed         confirmed local writes
+                           -> cancelled
+queued -> cancelled
+queued, thinking, researching, review -> interrupted
+thinking, researching -> failed                 request failure or restart
+any automatic lip job -> dismissed              excluded from future context
 ```
 
-A server restart marks `thinking` failed. The same UUID with the same input returns the existing job; changed words with an existing UUID are rejected. A new user-approved retry uses a new UUID.
+A UUID identifies each input. Same UUID and input returns the existing job; changed input is rejected. Plans are validated against a local tool allowlist and argument bounds. Notes and timers require explicit confirmation. Local effects and their receipts commit in one SQLite transaction. Repeated confirmation returns the completed result. Plans remain available after failures. Research jobs count toward the queue limit.
 
-`provider.py` sends the request and a bounded recent completed conversation to the model. It returns a structured **proposal**, not permission to execute arbitrary code. `validate_plan` checks the tool allowlist, argument shapes/ranges, and action count. Writes wait for confirmation. SQLite commits each action and its receipt in the same transaction; repeated confirmation returns the same completed result. UI and Studio distinguish proposals from actual execution receipts.
+The planner receives up to four completed request/reply/receipt turns. Dismissed or interrupted jobs are excluded. Pending HTTP work can be cancelled independently of camera capture; stale session/turn requests and late terminal-state updates are rejected. Already completed effects are not undone. Job polling continues without a camera socket because agent work can outlive capture.
 
-The original tools are local and narrow; research, page cards and inert Markdown drafts extend the conversation. See [turn-taking and work cards](TURN_TAKING.md). `calculate` evaluates a restricted arithmetic AST, never `eval`. There are no external write actions. Timer state consists of persisted due times; notification delivery is not implemented.
+SQLite operations are short synchronous transactions within a single-user service. Their lock timeout can still block an async caller under contention. A multi-user deployment needs asynchronous database boundaries and isolation; current software tests do not establish that capacity.
 
 ## HTTP surface
 
-All `/api/` HTTP routes require `Authorization: Bearer <app-access-token>`. `/api/stream` checks the origin and authenticates in its first message. The public static root exposes no runtime files.
+All API HTTP routes require the app bearer token. Camera authentication occurs in the first WebSocket message after origin validation. Static assets expose no runtime directory.
 
 | Route | Purpose |
 | --- | --- |
-| `GET /api/status` | Model readiness and service capabilities |
-| `WS /api/stream` | Camera frames, draft/result/quality events, commit/finish controls |
-| `GET/POST/DELETE /api/provider/config` | Inspect/configure/disconnect a text provider without returning its key |
-| `POST /api/provider/assist` | Select an existing visual candidate, never an invented replacement |
-| `POST /api/provider/voice` | Optional supported speech adapter |
-| `GET/POST /api/agent/jobs` | Poll recent jobs/timers or submit an automatic final prediction, reviewed request, or typed message |
-| `POST /api/agent/jobs/{id}/confirm` | Execute a pending write proposal once |
-| `POST /api/agent/jobs/{id}/cancel` | Cancel a queued job or pending proposal |
-| `POST /api/export` | Convert a bounded browser recording to MP4 |
+| `GET /api/status` | Readiness and capabilities |
+| `WS /api/stream` | Camera packets, caption/activity events and controls |
+| `GET/POST/DELETE /api/provider/config` | Provider connection without returning its key |
+| `POST /api/provider/assist` | Select an existing candidate |
+| `POST /api/provider/voice` | Optional generated caption speech |
+| `GET/POST /api/agent/jobs` | Read or submit jobs |
+| `POST /api/agent/jobs/{id}/{confirm,cancel,dismiss}` | Existing review and correction operations |
+| `POST /api/agent/interrupt` | Interrupt pending jobs |
+| `POST /api/export` | Bounded MP4 conversion |
 
-Automatic jobs may be marked `dismissed` using `POST /api/agent/jobs/{id}/dismiss`. They remain in the audit record but are excluded from later model context; already executed tools are not undone. A reply arriving after dismissal cannot restore the job.
+The `/api/openai/*` compatibility routes remain available; new integrations use the generic provider routes. The API has no stable external versioning promise. [Setup](SETUP.md) and [security](../SECURITY.md) describe deployment and data boundaries.
 
-Visual speech starts can call the same authenticated interruption operation as `POST /api/agent/interrupt`. Interrupted work never becomes completed, and the worker cancels its current HTTP await so later requests are not stuck behind it.
+## Extend existing components
 
-`/api/openai/*` routes remain for compatibility with the earlier private prototype. New UI/integrations should use the generic provider routes. API documentation is intentionally not served publicly; this prototype has no stable versioned external API promise yet.
-
-## Where to extend
-
-- **New recognizer:** preserve frame timing, draft/final boundaries, quality abstentions and real latency measurements. Replace the backend behind `LipReader` only after comparing held-out clips. A streaming implementation needs its own causal state and matching trained checkpoint.
-- **New text protocol:** implement connection validation and `complete()` in `provider.py`. Keep keys server-side, never transfer old keys to a new endpoint, redact errors, and locally validate plans even if the provider advertises strict schemas.
-- **New tool:** update the allowlist/schema, argument validation, transactional execution, UI labels, and tests together. External actions need a durable idempotency/reconciliation design; SQLite alone cannot make a remote API exactly-once.
-- **New speech adapter:** separate it from silent recognition and preserve provenance labels. Do not silently fall back to microphone transcription.
-- **Personalized commands:** build a separate opt-in data/calibration path. Preserve unknown/no-speech examples and an abstain outcome. Do not force arbitrary speech into the nearest known command.
-
-The app is deliberately single-user and single-worker. Multi-user isolation, durable secret storage, external agent frameworks, and native background capture are future work, not existing capabilities.
+Add provider protocols in `provider.py`, retaining server-side keys and local plan validation. Add tools through schema, validator, executor, receipt labels and tests together. Remote writes require idempotency and reconciliation beyond local transactions. Preserve the video-only protocol, real timing and abstention semantics when investigating recognition changes. Evaluate a measured gap before adding model or framework dependencies.

@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import io
 import json
@@ -7,9 +6,9 @@ import wave
 from unittest.mock import patch
 
 import httpx
-from fastapi.testclient import TestClient
-from openai_bridge import OpenAIBridge, BridgeError
-import server
+from support import RuntimeTestCase
+
+from openai_bridge import BridgeError, OpenAIBridge
 
 KEY = "sk-" + "testkey" * 8
 
@@ -167,9 +166,9 @@ class BridgeTests(unittest.IsolatedAsyncioTestCase):
                 await OpenAIBridge(key=KEY).voice("HELLO THERE")
 
 
-class BridgeEndpointTests(unittest.TestCase):
+class BridgeEndpointTests(RuntimeTestCase):
     def test_configuration_and_export_require_private_app_access(self):
-        client = TestClient(server.app)
+        client = self.client
         for method, path in [
             ("GET", "/api/openai/config"),
             ("POST", "/api/openai/config"),
@@ -180,24 +179,24 @@ class BridgeEndpointTests(unittest.TestCase):
             self.assertEqual(client.request(method, path).status_code, 401)
 
     def test_key_errors_do_not_echo_input(self):
-        client = TestClient(server.app)
+        client = self.client
         secret = "mistaken-private-value"
         response = client.post(
             "/api/openai/config",
-            headers={"Authorization": "Bearer " + server.TOKEN},
+            headers={"Authorization": "Bearer " + self.runtime.token},
             json={"key": secret},
         )
         self.assertEqual(response.status_code, 400)
         self.assertNotIn(secret, response.text)
 
     def test_config_never_exposes_the_provider_key(self):
-        previous = server.openai_bridge
-        server.openai_bridge = OpenAIBridge(key=KEY)
+        previous = self.runtime.openai_bridge
+        self.runtime.openai_bridge = OpenAIBridge(key=KEY)
         try:
-            response = TestClient(server.app).get(
-                "/api/openai/config", headers={"Authorization": "Bearer " + server.TOKEN}
+            response = self.client.get(
+                "/api/openai/config", headers={"Authorization": "Bearer " + self.runtime.token}
             )
             self.assertTrue(response.json()["configured"])
             self.assertNotIn(KEY, response.text)
         finally:
-            server.openai_bridge = previous
+            self.runtime.openai_bridge = previous

@@ -10,10 +10,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from openai_bridge import OpenAIBridge, BridgeError
 
 
 async def main():
+    from openai_bridge import BridgeError, OpenAIBridge
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--voice", action="store_true")
     args = parser.parse_args()

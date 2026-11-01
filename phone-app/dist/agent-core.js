@@ -3,7 +3,13 @@ export function actionLabel(a) {
   if (a.name === 'start_timer')
     return 'Start ' + a.seconds + 's timer' + (a.text ? ' · ' + a.text : '');
   if (a.name === 'calculate') return 'Calculate ' + a.expression;
-  return a.name === 'list_notes' ? 'Read saved notes' : 'Read timers';
+  if (a.name === 'list_notes') return 'Read saved notes';
+  if (a.name === 'list_timers') return 'Read timers';
+  if (a.name === 'research') return 'Research: ' + a.text;
+  if (a.name === 'open_page') return 'Open page preview: ' + a.text;
+  if (a.name === 'draft_document')
+    return 'Create document: ' + (a.text?.split('\n')[0].replace(/^#+\s*/, '') || 'Draft');
+  return 'Unknown action: ' + a.name;
 }
 export function receiptText(r) {
   if (r.tool === 'save_note') return 'Note saved · ' + r.result.saved;

@@ -5,10 +5,10 @@ import unittest
 import cv2
 import numpy as np
 from PIL import Image
-from fastapi.testclient import TestClient
+from support import RuntimeTestCase
 
 from engine import CaptureError, decode_frame, resample_frames
-import server
+from stream_buffer import StreamBuffer
 
 
 class CaptureTests(unittest.TestCase):
@@ -46,15 +46,11 @@ class CaptureTests(unittest.TestCase):
             resample_frames(samples)
 
 
-class EndpointTests(unittest.TestCase):
-    def setUp(self):
-        # No lifespan: protocol tests do not allocate or load production ML weights.
-        self.client = TestClient(server.app)
-
+class EndpointTests(RuntimeTestCase):
     def test_status_requires_private_key(self):
         self.assertEqual(self.client.get("/api/status").status_code, 401)
         response = self.client.get(
-            "/api/status", headers={"Authorization": "Bearer " + server.TOKEN}
+            "/api/status", headers={"Authorization": "Bearer " + self.runtime.token}
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["audio"])
@@ -64,7 +60,7 @@ class EndpointTests(unittest.TestCase):
     def test_assets_cannot_expose_access_token(self):
         response = self.client.get("/.runtime/access-token")
         self.assertEqual(response.status_code, 404)
-        self.assertNotIn(server.TOKEN, response.text)
+        self.assertNotIn(self.runtime.token, response.text)
         self.assertIn("microphone=()", self.client.get("/").headers["permissions-policy"])
 
     def test_websocket_rejects_foreign_origin(self):
@@ -87,9 +83,94 @@ class EndpointTests(unittest.TestCase):
                 ws.receive_json()
 
 
-class StreamingTests(unittest.TestCase):
+class StreamingTests(RuntimeTestCase):
+    def test_visual_turn_exposes_decoder_evidence_over_the_socket(self):
+        class Reader:
+            def begin_session(self):
+                pass
+
+            def analyze(self, samples):
+                return {
+                    "metadata": {
+                        "text": "CALL MAYA",
+                        "duration": samples[-1][0] - samples[0][0],
+                        "processing_seconds": 0.01,
+                        "trailing_blank_seconds": 0,
+                    }
+                }
+
+            def refine(self, analysis, thorough=True):
+                return {
+                    **analysis["metadata"],
+                    "type": "result",
+                    "text": "CALL MAYA",
+                    "draft_text": "CALL MAYA",
+                    "alternatives": ["CALL ANNA"],
+                    "auto_send": True,
+                }
+
+        class Mouth:
+            def reset(self):
+                pass
+
+            def check(self, frame, timestamp):
+                return {"type": "speech_activity", "event": None, "speaking": False}
+
+        class Monitor:
+            def check(self, frame):
+                return {"type": "quality", "ok": True}
+
+        self.runtime.state.update(status="ready", reader=Reader(), monitor=Monitor(), mouth=Mouth())
+        _, jpeg = cv2.imencode(".jpg", np.full((128, 160, 3), 100, np.uint8))
+        with self.client.websocket_connect(
+            "/api/stream", headers={"Origin": "http://testserver"}
+        ) as ws:
+            ws.send_json({"token": self.runtime.token, "mode": "live"})
+            hello = ws.receive_json()
+            self.assertTrue(hello["visual_turns"])
+            self.assertEqual(hello["version"], 4)
+            for i in range(39):
+                ws.send_bytes(struct.pack("<d", i / 25) + jpeg.tobytes())
+            ws.send_json({"type": "finish"})
+            events = []
+            while True:
+                event = ws.receive_json()
+                events.append(event)
+                if event["type"] == "finished":
+                    break
+        turns = [event for event in events if event["type"] == "utterance"]
+        self.assertEqual(len(turns), 1)
+        self.assertEqual(turns[0]["draft_text"], "CALL MAYA")
+        self.assertEqual(turns[0]["alternatives"], ["CALL ANNA"])
+
+    def test_non_object_camera_controls_fail_cleanly_and_release_the_session(self):
+        class Reader:
+            def begin_session(self):
+                pass
+
+        previous = self.runtime.state.copy()
+        self.runtime.state.update(status="ready", reader=Reader(), mouth=None)
+        try:
+            for control in [[], "x", 5, None, True]:
+                with self.subTest(control=control):
+                    with self.client.websocket_connect(
+                        "/api/stream", headers={"Origin": "http://testserver"}
+                    ) as ws:
+                        ws.send_json({"token": self.runtime.token})
+                        self.assertEqual(ws.receive_json()["type"], "connected")
+                        ws.send_json(control)
+                        error = ws.receive_json()
+                        self.assertEqual(error["type"], "error")
+                        self.assertEqual(
+                            error["message"], "Camera message was invalid. Restart the camera."
+                        )
+            self.assertFalse(self.runtime.session_lock.locked())
+        finally:
+            self.runtime.state.clear()
+            self.runtime.state.update(previous)
+
     def test_draft_is_due_before_old_five_second_wait(self):
-        stream = server.StreamBuffer()
+        stream = StreamBuffer()
         image = np.zeros((100, 100, 3), np.uint8)
         for i in range(36):
             stream.add(i / 25, image)
@@ -98,7 +179,7 @@ class StreamingTests(unittest.TestCase):
         self.assertFalse(stream.due())
 
     def test_finalization_preserves_video_arriving_during_inference(self):
-        stream = server.StreamBuffer()
+        stream = StreamBuffer()
         image = np.zeros((100, 100, 3), np.uint8)
         for i in range(101):
             stream.add(i / 25, image)
@@ -113,7 +194,7 @@ class StreamingTests(unittest.TestCase):
         self.assertTrue(all(t > 3 for t, _ in stream.frames))
 
     def test_frame_memory_is_bounded(self):
-        stream = server.StreamBuffer()
+        stream = StreamBuffer()
         image = np.zeros((100, 100, 3), np.uint8)
         for i in range(1000):
             stream.add(i / 30, image)
@@ -136,15 +217,15 @@ class StreamingTests(unittest.TestCase):
             def check(self, frame):
                 return {"type": "quality", "ok": True, "message": "Face clear"}
 
-        previous = server.state.copy()
-        server.state.update(status="ready", reader=Reader(), monitor=Monitor())
+        previous = self.runtime.state.copy()
+        self.runtime.state.update(status="ready", reader=Reader(), monitor=Monitor())
         try:
-            client = TestClient(server.app)
+            client = self.client
             _, jpeg = cv2.imencode(".jpg", np.full((128, 160, 3), 100, np.uint8))
             with client.websocket_connect(
                 "/api/stream", headers={"Origin": "http://testserver"}
             ) as ws:
-                ws.send_json({"token": server.TOKEN, "mode": "live"})
+                ws.send_json({"token": self.runtime.token, "mode": "live"})
                 self.assertEqual(ws.receive_json()["type"], "connected")
                 for i in range(39):
                     ws.send_bytes(struct.pack("<d", i / 25) + jpeg.tobytes())
@@ -158,8 +239,8 @@ class StreamingTests(unittest.TestCase):
                 self.assertFalse(any(e["type"] in {"draft", "result"} for e in events))
                 self.assertTrue(any(e["type"] == "abstained" and e["silent"] for e in events))
         finally:
-            server.state.clear()
-            server.state.update(previous)
+            self.runtime.state.clear()
+            self.runtime.state.update(previous)
 
     def test_stream_emits_drafts_then_one_refined_phrase(self):
         class Reader:
@@ -191,16 +272,16 @@ class StreamingTests(unittest.TestCase):
             def check(self, frame):
                 return {"type": "quality", "ok": True, "message": "Face clear"}
 
-        previous = server.state.copy()
-        server.state.update(status="ready", reader=Reader(), monitor=Monitor())
+        previous = self.runtime.state.copy()
+        self.runtime.state.update(status="ready", reader=Reader(), monitor=Monitor())
         try:
-            client = TestClient(server.app)
+            client = self.client
             frame = np.full((128, 160, 3), 100, np.uint8)
             _, jpeg = cv2.imencode(".jpg", frame)
             with client.websocket_connect(
                 "/api/stream", headers={"Origin": "http://testserver"}
             ) as ws:
-                ws.send_json({"token": server.TOKEN, "mode": "live"})
+                ws.send_json({"token": self.runtime.token, "mode": "live"})
                 self.assertEqual(ws.receive_json()["type"], "connected")
                 for i in range(39):
                     ws.send_bytes(struct.pack("<d", i / 25) + jpeg.tobytes())
@@ -219,8 +300,8 @@ class StreamingTests(unittest.TestCase):
                 self.assertEqual(result["sequence"], draft["sequence"])
                 self.assertEqual(result["capture_end"], 38 / 25)
         finally:
-            server.state.clear()
-            server.state.update(previous)
+            self.runtime.state.clear()
+            self.runtime.state.update(previous)
 
 
 if __name__ == "__main__":

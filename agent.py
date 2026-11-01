@@ -1,6 +1,7 @@
 """Durable, bounded agent jobs. Proposals cannot perform writes until reviewed."""
 
 from __future__ import annotations
+
 import ast
 import asyncio
 import hashlib
@@ -13,6 +14,7 @@ import time
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
+
 from provider import ProviderError
 from recognition_guard import review_reason
 from web_results import safe_url
@@ -177,7 +179,7 @@ class AgentStore:
                 return self.unpack(existing)
             if (
                 db.execute(
-                    "SELECT COUNT(*) FROM jobs WHERE state IN ('queued','thinking')"
+                    "SELECT COUNT(*) FROM jobs WHERE state IN ('queued','thinking','researching')"
                 ).fetchone()[0]
                 >= 12
             ):
@@ -213,7 +215,7 @@ class AgentStore:
     def update(self, id, state, *, plan=None, error=None):
         with self.db() as db:
             db.execute(
-                "UPDATE jobs SET state=?,plan=?,error=?,updated=? WHERE id=? AND state NOT IN ('dismissed','interrupted')",
+                "UPDATE jobs SET state=?,plan=COALESCE(?,plan),error=?,updated=? WHERE id=? AND state NOT IN ('dismissed','interrupted')",
                 (state, json.dumps(plan) if plan else None, error, time.time(), id),
             )
 

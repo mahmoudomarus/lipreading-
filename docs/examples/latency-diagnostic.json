@@ -1,0 +1,101 @@
+{
+  "recorded_date": "2026-11-01",
+  "configuration": {
+    "device": "cpu",
+    "threads": 4,
+    "fast_beam": 4,
+    "detailed_beam": 12,
+    "ctc_weight": 0.1,
+    "lm_weight": 0.3,
+    "jpeg_quality": 90,
+    "resize_long_edge": 800,
+    "endpoint": "finish",
+    "transport": "local WebSocket",
+    "mode": "live"
+  },
+  "video_sha256": "3bb8cffd51399caaf0c97abcd32bcab3493b2878ffda73bd648490ea47c75cc0",
+  "last_frame_seconds": 2.96,
+  "runs": 10,
+  "warmup_discarded": 1,
+  "latency_seconds": {
+    "first_draft_seconds": {
+      "n": 10,
+      "median": 1.968130853958428,
+      "p95": 2.2237609160365537,
+      "min": 1.8231874579796568,
+      "max": 2.2237609160365537
+    },
+    "final_from_start_seconds": {
+      "n": 10,
+      "median": 4.54376102052629,
+      "p95": 5.67331949993968,
+      "min": 4.310235958080739,
+      "max": 5.67331949993968
+    },
+    "final_after_last_frame_seconds": {
+      "n": 10,
+      "median": 1.58376102052629,
+      "p95": 2.71331949993968,
+      "min": 1.3502359580807388,
+      "max": 2.71331949993968
+    }
+  },
+  "timing_runs": [
+    {
+      "first_draft_seconds": 2.2237609160365537,
+      "final_from_start_seconds": 5.182238665991463,
+      "final_after_last_frame_seconds": 2.222238665991463
+    },
+    {
+      "first_draft_seconds": 2.0468686249805614,
+      "final_from_start_seconds": 4.370423583895899,
+      "final_after_last_frame_seconds": 1.4104235838958994
+    },
+    {
+      "first_draft_seconds": 1.8231874579796568,
+      "final_from_start_seconds": 4.342125957948156,
+      "final_after_last_frame_seconds": 1.3821259579481557
+    },
+    {
+      "first_draft_seconds": 1.9258895829552785,
+      "final_from_start_seconds": 4.647956707980484,
+      "final_after_last_frame_seconds": 1.6879567079804838
+    },
+    {
+      "first_draft_seconds": 2.0103721249615774,
+      "final_from_start_seconds": 5.577069374965504,
+      "final_after_last_frame_seconds": 2.617069374965504
+    },
+    {
+      "first_draft_seconds": 2.1074610830983147,
+      "final_from_start_seconds": 4.439565333072096,
+      "final_after_last_frame_seconds": 1.4795653330720961
+    },
+    {
+      "first_draft_seconds": 1.8421370419673622,
+      "final_from_start_seconds": 4.363169249962084,
+      "final_after_last_frame_seconds": 1.403169249962084
+    },
+    {
+      "first_draft_seconds": 1.8392178330104798,
+      "final_from_start_seconds": 4.310235958080739,
+      "final_after_last_frame_seconds": 1.3502359580807388
+    },
+    {
+      "first_draft_seconds": 1.8647385840304196,
+      "final_from_start_seconds": 5.67331949993968,
+      "final_after_last_frame_seconds": 2.71331949993968
+    },
+    {
+      "first_draft_seconds": 2.013600791920908,
+      "final_from_start_seconds": 5.010712624993175,
+      "final_after_last_frame_seconds": 2.0507126249931753
+    }
+  ],
+  "distinct_predictions": [
+    "THE SUNRISE WOULD BE TOO SOON"
+  ],
+  "reference_transcript": null,
+  "capture_kind": "unknown",
+  "scope": "Reference deployment timing only; one reused development clip; refactored application and physical phone interaction not benchmarked by this run."
+}

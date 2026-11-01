@@ -1,6 +1,7 @@
 """Fetch pinned inference code and verify model assets against assets.json."""
 
 from __future__ import annotations
+
 import argparse
 import hashlib
 import json

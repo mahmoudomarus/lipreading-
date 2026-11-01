@@ -1,7 +1,6 @@
 """Run the phone service detached from the terminal, with explicit start/status/stop."""
 
 import argparse
-import json
 import os
 import signal
 import subprocess

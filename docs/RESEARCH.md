@@ -1,56 +1,16 @@
-# Recognition investigation — 1 November 2026
+# Recognition research references
 
-## What is actually running
+The implemented system uses windowed Auto-AVSR inference, a trained decoder language model and an optional candidate selector. Work starts with the [current baseline](BASELINE.md), [recorded errors](RECORDING.md) and [paired evaluation](EVALUATION.md). Investigate crop, tracking, lighting and endpoint failures separately from visually ambiguous words.
 
-The camera transport is live. The recognition model is **offline Auto-AVSR**, repeatedly run on growing windows. The noncausal encoder and autoregressive decoder reprocess context. It has no incremental decoder state. A 30 FPS camera does not imply 30 FPS text generation. First draft includes the 1.35-second context wait, preprocessing, encoding, scheduling, and network delivery. Finalization adds beam decoding. A language model has no evidence that the original camera words were correct.
+## Primary projects and papers
 
-A previous local socket smoke run on one public three-second clip produced its first draft at 2.736 seconds and first refined output at 6.532 seconds from capture start. The output was not a valid demonstration of accurate general lip reading. These are diagnostic timings, not a benchmark or an accuracy result. `scripts/evaluate.py` measures real socket timing without sending the reference transcript to recognition. `scripts/profile_cache.py` checks repeated detection caching against uncached output on identical windows.
+- [Auto-AVSR](https://github.com/mpc001/auto_avsr) and [Chaplin](https://github.com/amanvirparhar/chaplin): the recognition code and inference pipeline used by the adapter.
+- [TorchAudio AVSR recipes](https://github.com/pytorch/audio/blob/main/examples/avsr/README.md): a research reference for online visual and audio-visual modeling. The application has no validated replacement checkpoint from that recipe.
+- [LipLearner paper](https://arxiv.org/abs/2302.05907) and [authors' code](https://github.com/rkmtlab/LipLearner): research on personalized silent commands. No such classifier is implemented here.
+- [VALLR](https://arxiv.org/abs/2503.21408): research on visual speech and language modeling. Any adaptation needs the same held-out comparison as other changes.
 
-## Primary sources and implications
+## Experimental method
 
-- [Auto-AVSR](https://github.com/mpc001/auto_avsr) and [Chaplin](https://github.com/amanvirparhar/chaplin): the existing sentence recognizer and inference implementation. Published checkpoint benchmark WER does not transfer to a new camera, person, crop pipeline, or decoder configuration.
-- [TorchAudio real-time ASR/VSR/AV-ASR recipe](https://github.com/pytorch/audio/blob/main/examples/avsr/README.md): provides `video` modality and `online` training/evaluation modes. Its displayed 3.9% WER result is **audio-visual**, not silent visual speech. That README is a training recipe, not a validated drop-in streaming visual checkpoint for this app. A replacement must be trained or obtained, licensed, and evaluated before enabling it.
-- [LipLearner, CHI 2023](https://arxiv.org/abs/2302.05907), [authors' code](https://github.com/rkmtlab/LipLearner): customizable mobile silent commands using few-shot learning. This supports investigating a separate personalized command recognizer with a bounded vocabulary. It does not establish unlimited sentence transcription accuracy, and no LipLearner accuracy is claimed for our implementation.
-- [VALLR](https://arxiv.org/abs/2503.21408): visual-to-phoneme and language-model methods address ambiguity; visually similar speech remains an information constraint. A more fluent decoder is not proof of better visual evidence.
-- [Apple camera controls](https://www.apple.com/privacy/control/): background camera access is disabled on iOS/iPadOS. Do not promise locked-phone/PWA background capture. Jobs on the computer can continue after the browser closes.
-- [Ollama compatible API](https://docs.ollama.com/api/openai-compatibility) and [Gemini compatible API](https://ai.google.dev/gemini-api/docs/openai): compatible chat endpoints allow replaceable text providers. Compatibility is not identical model behavior. All tool proposals undergo local validation.
+Collect observed reference/prediction pairs before building a homophene map or changing decoding. Prioritize frequent errors and meaning-changing names, numbers and negations. Candidate oracle WER can reveal whether the correct reading already exists in the beam. Evaluate the existing selector before adding another layer. Model plausibility and self-reported confidence are not independent visual verification.
 
-## Implemented now
-
-- Separate recognition, text provider, job store, and local tool executor.
-- Live replies submit final visual predictions automatically and label them unverified; manual review remains available. Drafts never reach the agent. Write tools still require confirmation.
-- Validate tool names and arguments, then require confirmation for notes/timers. Persist execution and receipt together. A duplicate request ID with changed words is rejected.
-- Show actual job states and receipts; no fake confidence or simulated live output.
-- Cache detections for identical captured frames within a session. Reset the cache between camera sessions. Do not cache unstable crop boundaries or noncausal encoder state.
-- Report last-frame-to-draft latency on the phone, separately from server processing time. This includes the phone connection and local processing; it is not time from utterance start.
-
-## What must happen before calling it reliable
-
-Collect consented, labeled clips from the intended user/phone, including ordinary speech, silence, unrelated movement, head turns, poor light, and ambiguous requests. Keep calibration and held-out evaluation sessions separate; vary dates, distance, and lighting. Never supply reference text to inference or include typed corrections in accuracy scores.
-
-Use a JSONL manifest such as:
-
-```json
-{"id":"heldout-01","video":"heldout/clip-01.mp4","reference":"start a five minute timer","speaker":"heldout-person","split":"heldout","capture_kind":"silent_mouthing","group":"day2-front-camera"}
-{"id":"heldout-silence-01","video":"heldout/silence-01.mp4","reference":"","expected_silence":true,"speaker":"heldout-person","split":"heldout","capture_kind":"no_speech","group":"day2-front-camera"}
-```
-
-Run:
-
-```sh
-.venv/bin/python scripts/evaluate.py path/to/manifest.jsonl --mode live --report .runtime/heldout-live.json
-```
-
-Track corpus WER, exact request match, silence false activations, abstentions, first draft latency, last-frame-to-draft p50/p95, final latency after capture, and confirmed action correctness. Word error rate can exceed 100% when insertions are large. No measured personal accuracy exists until those clips are collected.
-
-The next step is the [implementation audit and baseline](RECOGNITION_AUDIT.md), then [one incremental experiment on identical labeled clips](EVALUATION.md). Preserve the current recognizer and reuse the existing candidate selector, guards and confirmations. Inspect actual errors before proposing a model change or a separate classifier. No personalized classifier is implemented, and the present diagnostic footage does not justify adding one. Never report model plausibility or similarity as independent confidence.
-
-## Deliberate limits
-
-The agent can answer from model knowledge, calculate, save local notes, and start local timers. It can now run bounded cited web research and prepare page-preview/draft cards; it cannot operate arbitrary desktop apps, send email, post, purchase, or run shell commands. Timers use persisted due times and update on reconnect; there is no push notification or background alarm delivery while the phone is closed. Computer sleep suspends work. Provider requests have bounded timeouts and fail visibly. Jobs interrupted by server restart are marked failed instead of silently repeated.
-
-## Repeated filler follow-up
-
-An observed failure was a repeated, long decoder-generated preface being auto-sent after genuine questions. Empty CTC drafts previously still reached beam decoding; the decoder always returned its best sentence without an abstain outcome. The updated pipeline skips empty drafts, discounts uniform exposure changes in the motion heuristic, and holds self-repeating/implausibly expanded/disagreeing readings. A per-session repeat guard holds near-identical long readings within 45 seconds. These checks do not certify other readings as correct. They need evaluation on natural silence, head movement, and held-out speech, including false rejections.
-
-A synthetic frozen-mouth clip with changing exposure abstained before encoding/decoding; a public speech clip still decoded. This is a narrow regression check, not an accuracy result. The agent default was upgraded to `gpt-6.1-sol` using supported low reasoning effort. Two isolated live requests completed in 2.96 and 2.33 seconds; this does not change the specialist visual model's accuracy. Misread turns can be dismissed from conversation context while retaining their audit record.
+Calibrate any acceptance thresholds on validation clips only, then measure accepted-reading accuracy versus clarification on excluded speakers and sentences. Preserve the full working demo as the main baseline. [Limitations](../README.md#limitations) are maintained centrally.

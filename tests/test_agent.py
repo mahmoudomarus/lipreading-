@@ -1,16 +1,16 @@
-import asyncio
 import json
 import os
 import tempfile
 import unittest
 import uuid
-from unittest.mock import patch
 from pathlib import Path
+from unittest.mock import patch
+
 import httpx
-from fastapi.testclient import TestClient
-from agent import AgentStore, calculate, validate_plan
-from provider import TextProvider, ProviderError, endpoint
-import server
+from support import RuntimeTestCase
+
+from agent import AgentStore, calculate
+from provider import ProviderError, TextProvider, endpoint
 
 
 def plan(name="save_note", text="A real note", seconds=0, expression=""):
@@ -24,7 +24,7 @@ class ProviderTests(unittest.IsolatedAsyncioTestCase):
     async def test_responses_and_chat_return_real_content(self):
         for protocol in ("responses", "chat"):
 
-            def handler(request):
+            def handler(request, protocol=protocol):
                 body = json.loads(request.content)
                 self.assertEqual(body["model"], "test-model")
                 self.assertEqual(request.headers["authorization"], "Bearer secret")
@@ -141,6 +141,20 @@ class ProviderTests(unittest.IsolatedAsyncioTestCase):
 
 
 class AgentTests(unittest.IsolatedAsyncioTestCase):
+    async def test_failure_keeps_the_proposed_plan_for_review(self):
+        job = self.submit()
+        proposed = plan("research", "A question")
+        self.store.update(job["id"], "researching", plan=proposed)
+        self.store.update(job["id"], "failed", error="Timed out")
+        self.assertEqual(self.store.get(job["id"])["plan"], proposed)
+
+    def test_researching_jobs_count_toward_the_queue_limit(self):
+        for i in range(12):
+            job = self.submit(str(i))
+            self.store.update(job["id"], "researching")
+        with self.assertRaisesRegex(ValueError, "queue is full"):
+            self.submit("One too many")
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = AgentStore(Path(self.tmp.name) / "jobs.db")
@@ -285,9 +299,9 @@ class AgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(calculate("-(2 + 3)*4"), -20)
 
 
-class EndpointTests(unittest.TestCase):
+class EndpointTests(RuntimeTestCase):
     def test_all_agent_endpoints_require_private_access(self):
-        c = TestClient(server.app)
+        c = self.client
         for method, path in [
             ("GET", "/api/agent/jobs"),
             ("POST", "/api/agent/jobs"),

@@ -6,7 +6,20 @@ import {
   transcriptText,
   upsertCaption,
   compareWords,
+  readingCandidates,
 } from '../dist/core.js';
+
+test('comparison needs distinct supported candidates within the existing provider bounds', () => {
+  assert.deepEqual(readingCandidates({ text: 'hello' }), ['hello']);
+  assert.deepEqual(
+    readingCandidates({ text: 'hello', alternatives: ['hello', ' hi ', '', null] }),
+    ['hello', 'hi'],
+  );
+  assert.deepEqual(readingCandidates({ text: 'a'.repeat(601), alternatives: ['hi'] }), []);
+  assert.deepEqual(readingCandidates({ text: 'hello', alternatives: ['b'.repeat(601)] }), [
+    'hello',
+  ]);
+});
 
 test('connection fragment overrides old session and strips URL paths', () => {
   const result = readConnection(

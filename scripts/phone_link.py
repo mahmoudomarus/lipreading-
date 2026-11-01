@@ -4,6 +4,7 @@ import argparse
 import os
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
+
 import qrcode
 
 parser = argparse.ArgumentParser()

@@ -1,7 +1,9 @@
 import unittest
+
 import numpy as np
+
 from engine import LipReader, NoSpeech, mouth_motion
-from recognition_guard import review_reason, RecognitionGuard
+from recognition_guard import RecognitionGuard, review_reason
 
 
 class GuardTests(unittest.TestCase):

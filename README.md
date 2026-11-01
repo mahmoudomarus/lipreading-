@@ -54,13 +54,13 @@ flowchart LR
 
 Final lip predictions, manually reviewed or typed text, and recent completed agent context go to the selected text provider. Camera frames stay in the computer's recognition pipeline. Optional speech uses a separate adapter. [Module map, API boundaries, and extension points →](docs/ARCHITECTURE.md)
 
-## Accuracy and latency: the open problem
+## Limitations
 
-Auto-AVSR and Chaplin provide the visual model. Their published benchmark results are not this app's accuracy on your phone. Mouth movements can be ambiguous, the capture conditions differ from training data, and repeated offline inference adds delay. A fluent language-model response does not validate the original words.
+Recognition accuracy has not been established on a labeled phone corpus or genuine silent mouthing. The system processes offline windows, so text arrives after capture and decoding delays. Quality checks and review guards are uncalibrated and can miss errors or reject correct readings. A stronger text model does not independently verify visible speech.
 
-A development smoke test produced a first draft at **2.13 seconds** and a refined result at **4.85 seconds** from capture start, but the sentence was still misread. That is one diagnostic run, not a representative benchmark or a guarantee. There is no personal held-out accuracy result yet.
+The prototype supports one user, one worker and one camera session. Phone capture requires a visible page; the computer must stay awake. Full inference and phone interactions need validation beyond the development Mac. Timers have no closed-phone push alarm. Research, speech and embedding capabilities depend on the selected adapter. The service is not audited for multi-user or high-impact execution.
 
-Start with the [current implementation audit and frozen diagnostic baseline](docs/RECOGNITION_AUDIT.md), then [evaluate one incremental change](docs/EVALUATION.md). Existing candidates, language modeling, optional context selection, uncertainty guards and command confirmations should be reused. No new recognizer or LLM layer is justified by the available diagnostic clip. [Research and methodology](docs/RESEARCH.md) · [Measurements and verification limits](docs/MEASUREMENTS.md) · [Prioritized roadmap](docs/ROADMAP.md)
+[Canonical baseline and timing data](docs/BASELINE.md) · [Evaluation](docs/EVALUATION.md) · [Recording protocol](docs/RECORDING.md) · [Architecture](docs/ARCHITECTURE.md)
 
 ## Develop without downloading models
 
