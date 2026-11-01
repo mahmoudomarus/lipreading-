@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible setup, camera, agent, or Studio problem.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Include the command or UI steps and affected commit.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python/library versions, phone and browser; say whether full inference or only tests were run.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence
+      description: Never include API keys, access tokens, private links, databases or personal footage.

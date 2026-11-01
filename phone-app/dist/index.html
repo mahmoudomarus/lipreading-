@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#090c11" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="description"
+      content="A camera-only lip-reading experiment. Live captions, optional AI voice, and a studio for recording your demo."
+    />
+    <title>Lipread Studio — Sound off. Words on.</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="studio.css" />
+    <link rel="stylesheet" href="agent.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <svg class="symbols" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <symbol id="camera-icon" viewBox="0 0 24 24">
+          <path d="M4 7h4l2-3h4l2 3h4v13H4z" />
+          <circle cx="12" cy="13" r="4" />
+        </symbol>
+        <symbol id="switch-icon" viewBox="0 0 24 24">
+          <path d="M4 8a8 8 0 0 1 14-3l2 3M20 3v5h-5M20 16a8 8 0 0 1-14 3l-2-3M4 21v-5h5" />
+        </symbol>
+        <symbol id="copy-icon" viewBox="0 0 24 24">
+          <rect x="8" y="8" width="12" height="13" rx="2" />
+          <path d="M16 8V3H3v13h5" />
+        </symbol>
+        <symbol id="settings-icon" viewBox="0 0 24 24">
+          <path d="M4 7h16M4 17h16" />
+          <circle cx="9" cy="7" r="3" />
+          <circle cx="15" cy="17" r="3" />
+        </symbol>
+        <symbol id="mute-icon" viewBox="0 0 24 24">
+          <path
+            d="M9 9v3a3 3 0 0 0 5 2m1-5V5a3 3 0 0 0-6 0m-3 7a6 6 0 0 0 10 4m2-4v-1M12 18v3M8 21h8M3 3l18 18"
+          />
+        </symbol>
+        <symbol id="close-icon" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
+        <symbol id="check-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></symbol>
+        <symbol id="spark-icon" viewBox="0 0 24 24">
+          <path d="m12 3 2.7 6.3L21 12l-6.3 2.7L12 21l-2.7-6.3L3 12l6.3-2.7z" />
+        </symbol>
+      </defs>
+    </svg>
+    <div class="app-shell">
+      <header class="app-header">
+        <a class="brand" href="#" aria-label="Lipread home"
+          ><span class="brand-mark"><i></i><i></i><i></i><i></i><i></i></span>lipread<span
+            class="version"
+            >LAB</span
+          ></a
+        >
+        <div class="header-actions">
+          <span class="connection-state" id="connection-state">Connecting</span
+          ><button id="studio-open" class="studio-launch">Open studio <span>↗</span></button
+          ><button
+            class="icon-button settings-button"
+            id="settings-button"
+            aria-label="Open settings"
+          >
+            <svg><use href="#settings-icon" /></svg>
+          </button>
+        </div>
+      </header>
+      <main>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">SILENT INPUT. REAL INTENT.</p>
+            <h1>Say less. Do more<span>.</span></h1>
+            <p class="studio-subtitle">Your camera is the input. Your agent takes it from here.</p>
+          </div>
+          <span class="language-pill"
+            ><span class="language-dot"></span>English<span class="language-code">EN</span></span
+          >
+        </div>
+        <section class="connection" id="connection" hidden>
+          <div class="pairing-copy">
+            <strong>Open your private connected link.</strong>
+            <p>
+              Connect your private camera service, then choose a model in
+              <button id="pairing-provider" type="button">Settings → Model connection</button>.
+            </p>
+          </div>
+          <details>
+            <summary>Manual computer connection</summary>
+            <form id="connection-form">
+              <label
+                >Computer service URL<input
+                  type="url"
+                  id="server-input"
+                  autocomplete="off"
+                  placeholder="https://…trycloudflare.com" /></label
+              ><label
+                >App connection key<input
+                  type="password"
+                  id="key-input"
+                  autocomplete="off"
+                  placeholder="From your private app link" /></label
+              ><button type="submit" class="connect-button">Connect computer</button>
+            </form>
+          </details>
+        </section>
+        <div class="workspace">
+          <section class="capture-panel" aria-label="Live camera">
+            <div class="viewfinder" id="viewfinder">
+              <video id="video" muted playsinline autoplay aria-label="Your camera preview"></video>
+              <div class="camera-placeholder" id="camera-placeholder">
+                <div class="placeholder-grid"></div>
+                <div class="placeholder-face">
+                  <span></span><span></span><span></span><span></span
+                  ><svg viewBox="0 0 160 200">
+                    <path d="M45 60c0-52 70-52 70 0v30c0 36-70 36-70 0z" />
+                    <path d="M25 185v-17c0-35 110-35 110 0v17" />
+                    <path d="M60 78h4m32 0h4M70 105c8 5 12 5 20 0" />
+                  </svg>
+                </div>
+                <div class="placeholder-copy">
+                  <h2>Face the camera.</h2>
+                  <p>Good light. Natural speech. No sound needed.</p>
+                </div>
+              </div>
+              <div class="video-top">
+                <span class="video-tag" id="capture-state"><span></span>CAMERA OFF</span
+                ><span class="audio-tag"
+                  ><svg><use href="#mute-icon" /></svg>Mic off</span
+                >
+              </div>
+              <div class="face-guide" id="face-guide" hidden>
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <div class="caption-overlay" id="caption-overlay" hidden>
+                <span id="overlay-label" class="overlay-label">DRAFT</span>
+                <p id="overlay-text"></p>
+              </div>
+              <div class="video-bottom">
+                <span class="quality-label" id="camera-hint"
+                  ><span></span>Position your face in the center</span
+                ><button id="flip" class="icon-button flip-button" aria-label="Switch camera">
+                  <svg><use href="#switch-icon" /></svg>
+                </button>
+              </div>
+              <div class="capture-progress" id="capture-progress"></div>
+            </div>
+            <div class="camera-toolbar">
+              <div class="mode-switch" role="group" aria-label="Caption mode">
+                <button id="live-mode" aria-pressed="true">
+                  <span class="live-dot"></span>Live</button
+                ><button id="phrase-mode" aria-pressed="false">Phrase</button>
+              </div>
+              <span class="mode-note" id="window-note">Drafts as you speak</span
+              ><span class="fps-pill" id="fps">— fps</span>
+            </div>
+            <div class="capture-controls">
+              <button id="start" class="start-button" disabled>
+                <span class="record-indicator"></span><span id="start-label">Start reading</span
+                ><span class="button-shortcut">↗</span></button
+              ><button
+                id="commit"
+                class="commit-button"
+                disabled
+                title="Refine this sentence while keeping the camera on"
+              >
+                <svg><use href="#check-icon" /></svg><span>Finish sentence</span>
+              </button>
+            </div>
+            <div class="status-row">
+              <span id="status-dot" class="status-indicator"></span>
+              <p id="status-message" role="status" aria-live="polite">
+                Connecting to your computer…
+              </p>
+            </div>
+            <div class="engine-row">
+              <span
+                ><span class="engine-dot"></span
+                ><span id="engine-label">Visual speech recognition</span></span
+              ><span id="latency">No microphone required</span>
+            </div>
+          </section>
+          <section class="transcript-panel assistant-view" aria-label="Predicted captions">
+            <div class="transcript-header">
+              <div>
+                <span class="section-kicker">THE CONVERSATION</span>
+                <h2>The quiet assistant<span class="agent-online-dot"></span></h2>
+              </div>
+              <div class="transcript-actions">
+                <button
+                  class="icon-button copy-button"
+                  id="copy"
+                  aria-label="Copy transcript"
+                  disabled
+                >
+                  <svg><use href="#copy-icon" /></svg></button
+                ><button class="clear-button" id="clear" disabled>Clear</button>
+              </div>
+            </div>
+            <div class="conversation-tabs" role="group" aria-label="Conversation view">
+              <button id="assistant-tab" aria-pressed="true">Assistant <span>↗</span></button
+              ><button id="captions-tab" aria-pressed="false">Transcript</button>
+            </div>
+            <div id="agent-panel" class="agent-panel">
+              <div class="agent-feed" id="agent-feed" role="log" aria-live="polite">
+                <div class="agent-welcome" id="agent-welcome">
+                  <div class="agent-orb">✳</div>
+                  <p class="eyebrow">A LITTLE LESS NOISE</p>
+                  <h3>A thought.<br />A movement.<br />Something done.</h3>
+                  <p>
+                    Ask a question, save an idea, or start a timer. Review the words your camera
+                    reads, then send.
+                  </p>
+                  <div class="agent-capabilities">
+                    <span>Notes ↗</span><span>Timers ↗</span><span>Answers ↗</span>
+                  </div>
+                </div>
+              </div>
+              <div class="agent-timers" id="agent-timers" aria-live="off" hidden></div>
+              <form id="agent-form" class="agent-composer">
+                <div class="composer-meta">
+                  <span id="agent-source">TYPE, OR REVIEW A CAPTION</span
+                  ><button type="button" id="agent-use-latest">Use latest caption ↓</button>
+                </div>
+                <label class="sr-only" for="agent-request">Review your request</label
+                ><textarea
+                  id="agent-request"
+                  rows="2"
+                  maxlength="1200"
+                  placeholder="What would you like to do?"
+                ></textarea>
+                <div class="composer-bottom">
+                  <span id="agent-message" role="status">You review. Then it acts.</span
+                  ><button id="agent-send" type="submit">Send request <span>↗</span></button>
+                </div>
+              </form>
+              <p class="agent-background">
+                Jobs continue on your computer. Keep this page visible for camera input.
+              </p>
+            </div>
+            <div class="transcript-scroll" id="transcript-scroll">
+              <div class="transcript-empty" id="transcript-empty">
+                <div class="empty-glyph">
+                  <span></span><span></span><span></span><span></span><span></span><span></span
+                  ><span></span>
+                </div>
+                <h3>Ready to listen.<br />With the camera.</h3>
+                <p>
+                  Start reading and speak a short sentence. Draft words appear first, then get
+                  refined.
+                </p>
+                <span class="empty-note"
+                  ><svg><use href="#mute-icon" /></svg>Sound stays off.</span
+                >
+              </div>
+              <div
+                id="transcript"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+              ></div>
+              <div class="draft-card" id="draft-card" hidden>
+                <div class="draft-meta">
+                  <span class="draft-pulse"></span><span id="draft-phase">Live draft</span
+                  ><span>may change</span>
+                </div>
+                <p id="draft-text"></p>
+              </div>
+            </div>
+            <div class="transcript-footer">
+              <span class="prediction-icon">~</span>
+              <p>
+                Predictions, not guaranteed words.<br />Drafts may change as more context arrives.
+              </p>
+              <button
+                id="details-toggle"
+                class="about-button"
+                aria-expanded="false"
+                aria-controls="details"
+              >
+                About<span>↗</span>
+              </button>
+            </div>
+          </section>
+        </div>
+        <div class="studio-callout">
+          <div>
+            <span class="studio-callout-tag">MADE TO BE SHOWN</span>
+            <h2>A silent request. A visible result.</h2>
+            <p>
+              Record your real camera, predicted words, and agent response in a clean 45-second
+              clip.
+            </p>
+          </div>
+          <button id="studio-open-bottom">Make a clip <span>↗</span></button>
+        </div>
+        <div class="bottom-note">
+          <span class="privacy-mark"
+            ><svg><use href="#check-icon" /></svg>Camera-only input. Video is saved only when you
+            choose to record.</span
+          ><button class="accuracy-link" id="accuracy-button">
+            Check my accuracy<span>↗</span>
+          </button>
+        </div>
+        <section id="details" class="details" hidden>
+          <h2>What’s happening behind the captions?</h2>
+          <p>
+            A specialist visual speech model reads camera frames. An offline model repeatedly
+            processes a growing window to produce drafts; this is not a fully streaming recognizer.
+            Pauses, the sentence button, or an eight-second limit trigger a fuller decoder pass. A
+            pause is estimated and can be misdetected. The studio overlay tracks four actual face
+            landmarks; it is not a phoneme or confidence visualization.
+          </p>
+          <p>
+            Silent lip reading is ambiguous and cannot guarantee exact words. Optional context
+            assistance selects among the visual model’s existing readings. It does not verify the
+            words. Optional AI voice reads a predicted caption using generated speech. Only caption
+            text is sent to your model when those features are used; camera frames stay on your
+            computer. API usage is billed to the connected key.
+          </p>
+          <p>
+            Reviewed agent requests and tool receipts are saved locally in a private database. They
+            can be cleared from the computer. Camera video stays in memory unless you press Record
+            in Studio. Studio recordings contain the camera, caption provenance labels, and optional
+            generated voice; they never contain microphone input. MP4 conversion uses temporary
+            files on your computer that are deleted after conversion. Cloudflare relays the
+            connection.
+          </p>
+          <p>
+            <a href="https://github.com/mpc001/auto_avsr" target="_blank" rel="noreferrer"
+              >Auto-AVSR research</a
+            >
+            ·
+            <a href="https://github.com/amanvirparhar/chaplin" target="_blank" rel="noreferrer"
+              >Chaplin</a
+            >
+          </p>
+        </section>
+      </main>
+      <footer class="app-footer">
+        <span>LIPREAD / EXPERIMENTAL</span><span>Less noise. More connection.</span>
+      </footer>
+    </div>
+    <dialog id="settings-dialog" class="settings-dialog">
+      <div class="dialog-top">
+        <div>
+          <p class="eyebrow">MAKE IT WORK FOR YOU</p>
+          <h2>Reading settings</h2>
+        </div>
+        <button class="icon-button" id="settings-close" aria-label="Close settings">
+          <svg><use href="#close-icon" /></svg>
+        </button>
+      </div>
+      <section class="provider-section" id="provider-section">
+        <div class="provider-heading">
+          <h3>Model connection</h3>
+          <span id="provider-state">Connect your computer first</span>
+        </div>
+        <p>
+          Bring a hosted or local model. Credentials stay in server memory. The agent sends your
+          reviewed request and recent conversation; jobs and tool receipts are saved on your
+          computer.
+        </p>
+        <form id="provider-form">
+          <div class="provider-fields">
+            <label
+              >API protocol<select id="provider-protocol">
+                <option value="responses">Responses</option>
+                <option value="chat">Chat-compatible</option>
+              </select></label
+            ><label
+              >API base URL<input
+                id="provider-base"
+                type="url"
+                autocomplete="off"
+                placeholder="https://your-endpoint/v1" /></label
+            ><label
+              >Model ID<input id="provider-model" autocomplete="off" placeholder="Your model ID"
+            /></label>
+          </div>
+          <label for="provider-key">API key · leave blank to keep the current key</label>
+          <div class="key-form-row">
+            <input
+              id="provider-key"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="API key, if required"
+            /><button id="provider-connect" type="submit">Connect model</button>
+          </div>
+        </form>
+        <button id="provider-forget" class="forget-key" hidden>Disconnect model</button>
+        <div class="provider-options">
+          <label
+            ><input id="assist-toggle" type="checkbox" disabled /><span
+              >Context assist<small
+                >Choose among existing visual readings. Predictions remain uncertain.</small
+              ></span
+            ></label
+          ><label
+            ><input id="auto-voice" type="checkbox" disabled /><span
+              >Read refined captions aloud<small
+                >AI-generated voice. No microphone input.</small
+              ></span
+            ></label
+          >
+        </div>
+        <button id="voice-latest" class="voice-latest" disabled>
+          Play latest caption with AI voice ↗
+        </button>
+        <p id="provider-message" class="provider-message" role="status">
+          Only text is sent to your selected endpoint. Video recognition runs on your computer.
+          Speech output availability depends on the connection.
+        </p>
+      </section>
+      <div class="setting-row">
+        <div>
+          <strong>Input language</strong>
+          <p>English visual speech recognition</p>
+        </div>
+        <span class="setting-value">English</span>
+      </div>
+      <div class="setting-row">
+        <div>
+          <strong>Microphone</strong>
+          <p>Video only. Audio is never requested.</p>
+        </div>
+        <span class="setting-value">Off</span>
+      </div>
+      <div class="accuracy-section">
+        <h3>Check your own accuracy</h3>
+        <p>
+          Type a sentence, then say it to the camera. This reference stays in your browser and is
+          never supplied to the recognition model or agent.
+        </p>
+        <label for="reference-text">The sentence you will say</label
+        ><textarea id="reference-text" rows="3" placeholder="Hello, how are you today?"></textarea>
+        <div class="accuracy-result" id="accuracy-result">
+          Your next refined caption will be compared here.
+        </div>
+      </div>
+      <div class="dialog-tip">
+        Face the lens, move close enough to show your lips clearly, and speak naturally.
+      </div>
+    </dialog>
+    <dialog id="agent-review-dialog" class="settings-dialog agent-review-dialog">
+      <div class="dialog-top">
+        <h2>Review your request</h2>
+        <button id="agent-modal-close" class="icon-button" aria-label="Close request">×</button>
+      </div>
+      <p id="agent-modal-source">Review the words before sending.</p>
+      <div id="agent-modal-actions" hidden></div>
+      <button id="agent-modal-confirm" hidden>Confirm actions ↗</button>
+      <form id="agent-modal-form">
+        <label class="sr-only" for="agent-modal-request">Request</label
+        ><textarea id="agent-modal-request" rows="4" maxlength="1200"></textarea
+        ><button id="agent-modal-send" type="submit">Send request ↗</button>
+      </form>
+    </dialog>
+    <section id="studio" class="studio" hidden aria-label="Lipread recording studio">
+      <div class="studio-topbar">
+        <a class="brand" href="#">lipread<span class="version">LAB</span></a
+        ><span class="studio-top-note">A real camera. Predicted words. Zero microphone input.</span
+        ><button id="studio-close" class="icon-button" aria-label="Exit studio">
+          <svg><use href="#close-icon" /></svg>
+        </button>
+      </div>
+      <div class="studio-stage-wrap">
+        <canvas
+          id="studio-canvas"
+          width="1280"
+          height="720"
+          aria-label="Live camera stage with predicted captions"
+        ></canvas>
+        <div id="studio-countdown" class="studio-countdown" hidden></div>
+      </div>
+      <div class="studio-controls">
+        <div class="studio-left-controls">
+          <button id="studio-camera">Start camera</button
+          ><button id="studio-commit" disabled>Finish sentence</button
+          ><button id="studio-aspect" aria-label="Change recording aspect ratio">
+            16:9 <span>↔</span></button
+          ><button id="studio-agent">Review request ↗</button
+          ><button id="studio-voice" disabled>AI voice ↗</button>
+        </div>
+        <button id="studio-record" class="studio-record">
+          <span></span><span id="studio-record-label">Record clip</span>
+        </button>
+      </div>
+      <p id="studio-status" role="status">
+        Open the camera, speak naturally, and record a clip up to 45 seconds.
+      </p>
+      <div id="studio-export" class="studio-export" hidden>
+        <div>
+          <strong id="export-title">Your clip is ready.</strong>
+          <p id="export-note">Camera footage and predicted captions. No microphone.</p>
+        </div>
+        <a id="studio-download" download="lipread-studio.mp4">Download MP4 ↧</a
+        ><button id="studio-copy-post">Copy post text ↗</button>
+      </div>
+      <div class="studio-footnote">
+        Experimental visual speech recognition · Drafts and AI-assisted readings are labeled in the
+        recording.
+      </div>
+    </section>
+  </body>
+</html>

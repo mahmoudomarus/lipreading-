@@ -1,0 +1,2 @@
+{"video":"heldout/clip-01.mp4","reference":"start a five minute timer","group":"session-b-front-camera"}
+{"video":"heldout/silence-01.mp4","reference":"","expected_silence":true,"group":"session-b-front-camera"}

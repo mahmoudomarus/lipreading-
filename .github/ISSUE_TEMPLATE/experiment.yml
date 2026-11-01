@@ -1,0 +1,21 @@
+name: Improvement experiment
+description: Propose a measured improvement to recognition, latency, or agent behavior.
+body:
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis and proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: evaluation
+    attributes:
+      label: Evaluation plan
+      description: Baseline, held-out split, metrics, negative examples and device/hardware. Keep references out of inference.
+    validations:
+      required: true
+  - type: textarea
+    id: provenance
+    attributes:
+      label: Dependencies, checkpoint terms and data provenance
+      description: Link upstream code/model sources; do not upload weights or private footage.
