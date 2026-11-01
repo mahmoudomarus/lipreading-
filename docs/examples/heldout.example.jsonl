@@ -1,2 +1,3 @@
-{"video":"heldout/clip-01.mp4","reference":"start a five minute timer","group":"session-b-front-camera"}
-{"video":"heldout/silence-01.mp4","reference":"","expected_silence":true,"group":"session-b-front-camera"}
+{"id":"heldout-01","video":"heldout/clip-01.mp4","reference":"start a five minute timer","speaker":"person-excluded-from-validation","split":"heldout","capture_kind":"silent_mouthing","group":"session-b-front-camera","context":"","agent_context":[],"critical_spans":[{"kind":"number","text":"five"}],"expected_actions":[{"name":"start_timer","seconds":300}]}
+{"id":"heldout-02","video":"heldout/clip-02.mp4","reference":"do not save that note","speaker":"person-excluded-from-validation","split":"heldout","capture_kind":"silent_mouthing","group":"session-b-front-camera","context":"","agent_context":[],"critical_spans":[{"kind":"negation","text":"not"}],"expected_actions":[]}
+{"id":"heldout-silence-01","video":"heldout/silence-01.mp4","reference":"","expected_silence":true,"speaker":"person-excluded-from-validation","split":"heldout","capture_kind":"no_speech","group":"session-b-front-camera","context":"","agent_context":[],"expected_actions":[]}

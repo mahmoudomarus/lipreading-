@@ -4,10 +4,10 @@ The concept is a silent interface to useful software. The bottleneck is trustwor
 
 | Priority | Experiment | Evidence needed before calling it an improvement |
 | --- | --- | --- |
-| 1 | Establish a consented held-out phone corpus | Separate people/sessions or calibration/evaluation sessions; transcripts withheld from inference; silence and hard negatives included |
-| 2 | Improve crop/landmark stability and frame delivery | Same-clip WER, abstentions and latency against baseline; test head angle, camera orientation, distance and lighting |
-| 3 | Evaluate a genuinely streaming visual-only recognizer | Accessible checkpoint with suitable terms, actual causal inference, real phone latency p50/p95, and accuracy comparison |
-| 4 | Personalized bounded commands | Opt-in labeled examples, separate calibration/test sessions, unknown commands and silent negatives, calibrated abstention thresholds |
+| 1 | Establish a consented validation/held-out phone corpus | Separate speakers and sentences; references withheld from inference; genuinely silent mouthing, natural no-speech and hard negatives included |
+| 2 | Evaluate the optional existing-hold preservation fix | Compare accepted-reading accuracy, clarification, critical/intent errors and latency against the frozen full-demo baseline; default remains off |
+| 3 | Investigate observed crop, capture and timing errors | Change one existing component at a time only where labeled failures justify it; same-clip WER and latency, including regressions |
+| 4 | Evaluate existing candidates/context selection and guards | Candidate oracle WER, selection mistakes and added latency; validation-only threshold calibration and held-out acceptance/clarification tradeoff; no duplicate LLM layer |
 | 5 | Reduce waste in inference and transport | Stage-level timing, memory/capture continuity, numerical or transcript equivalence where claimed, controlled warmup/load |
 | 6 | Improve agent portability and execution | Protocol fixtures, malformed responses, timeouts, retries, interrupted jobs, duplicate requests/confirmation and provider swaps |
 | 7 | Expand device usability | Documented iPhone/Android/browser recordings, rotation, camera permissions, wake lock, accessibility and exported audio/video |
@@ -21,6 +21,8 @@ The concept is a silent interface to useful software. The bottleneck is trustwor
 - Improve the evaluator's per-group reports or confidence intervals while keeping references outside the recognition path.
 
 ## Larger research contributions
+
+These are future research directions, not the current build spec. Preserve the working architecture; a new model/framework needs a measured gap and a separate controlled comparison. [Current priorities and optional patch](RECOGNITION_AUDIT.md).
 
 A streaming model is not obtained by merely slicing an offline model into smaller calls. Provide its code/checkpoint provenance, licensing terms, causal/chunk state behavior, context/latency definition and a comparison on identical held-out clips. Do not quote audio-visual benchmark numbers as silent-video results.
 

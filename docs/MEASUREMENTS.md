@@ -2,6 +2,8 @@
 
 These results are diagnostic checks on the development Mac, not representative accuracy claims. No personal held-out footage has been evaluated.
 
+The later [current-state audit](RECOGNITION_AUDIT.md) records an exact local baseline snapshot and same-clip optional experiment. Its actual original-clip timings are first draft 2.197 s and finalized turn 4.778 s. A separate natural-endpoint run finalized the synthetic frozen-tail diagnostic at 6.636 s. No verified references, held-out people or genuine silent mouthing are available, so WER, semantic error rates and calibrated confidence remain unmeasured. Historical runs below are not controlled before/after accuracy evidence.
+
 | Check | Observation |
 | --- | --- |
 | Earlier local WebSocket sample run | First draft 2.736 s; refined result 6.532 s from capture start |

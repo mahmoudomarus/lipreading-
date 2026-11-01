@@ -31,8 +31,8 @@ Collect consented, labeled clips from the intended user/phone, including ordinar
 Use a JSONL manifest such as:
 
 ```json
-{"video":"heldout/clip-01.mp4","reference":"start a five minute timer","group":"day2-front-camera"}
-{"video":"heldout/silence-01.mp4","reference":"","expected_silence":true,"group":"day2-front-camera"}
+{"id":"heldout-01","video":"heldout/clip-01.mp4","reference":"start a five minute timer","speaker":"heldout-person","split":"heldout","capture_kind":"silent_mouthing","group":"day2-front-camera"}
+{"id":"heldout-silence-01","video":"heldout/silence-01.mp4","reference":"","expected_silence":true,"speaker":"heldout-person","split":"heldout","capture_kind":"no_speech","group":"day2-front-camera"}
 ```
 
 Run:
@@ -43,7 +43,7 @@ Run:
 
 Track corpus WER, exact request match, silence false activations, abstentions, first draft latency, last-frame-to-draft p50/p95, final latency after capture, and confirmed action correctness. Word error rate can exceed 100% when insertions are large. No measured personal accuracy exists until those clips are collected.
 
-The next model experiment should compare an actually streaming, visual-only checkpoint against this baseline on the same held-out clips. A separate personalized command classifier needs negative examples, held-out threshold calibration, and an abstain outcome; never force the nearest command or report embedding similarity as confidence. No personalized classifier is implemented yet.
+The next step is the [implementation audit and baseline](RECOGNITION_AUDIT.md), then [one incremental experiment on identical labeled clips](EVALUATION.md). Preserve the current recognizer and reuse the existing candidate selector, guards and confirmations. Inspect actual errors before proposing a model change or a separate classifier. No personalized classifier is implemented, and the present diagnostic footage does not justify adding one. Never report model plausibility or similarity as independent confidence.
 
 ## Deliberate limits
 

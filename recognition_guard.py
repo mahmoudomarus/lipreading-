@@ -36,13 +36,18 @@ def review_reason(text, *, draft=None, duration=None):
 
 
 class RecognitionGuard:
-    def __init__(self):
+    def __init__(self, *, preserve_holds=False):
         self.recent = deque(maxlen=12)
+        self.preserve_holds = preserve_holds
 
     def assess(self, result, timestamp):
         reason = review_reason(
             result.get("text"), draft=result.get("draft_text"), duration=result.get("duration")
         )
+        if self.preserve_holds and result.get("auto_send") is False:
+            reason = (
+                result.get("review_reason") or reason or "Part of this request needs correction."
+            )
         normalized = " ".join(words(result.get("text")))
         if not reason and len(words(normalized)) >= 6:
             for previous, at in self.recent:

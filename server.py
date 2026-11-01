@@ -420,7 +420,7 @@ async def stream(ws: WebSocket):
         mode = hello.get("mode", "live")
         mode = mode if mode in {"live", "phrase"} else "live"
         buffer = StreamBuffer()
-        guard = RecognitionGuard()
+        guard = RecognitionGuard(preserve_holds=os.getenv("LIPREAD_PRESERVE_HOLDS", "0") == "1")
         utterances = Utterances()
         closing = False
         draining = False

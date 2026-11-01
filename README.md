@@ -60,7 +60,7 @@ Auto-AVSR and Chaplin provide the visual model. Their published benchmark result
 
 A development smoke test produced a first draft at **2.13 seconds** and a refined result at **4.85 seconds** from capture start, but the sentence was still misread. That is one diagnostic run, not a representative benchmark or a guarantee. There is no personal held-out accuracy result yet.
 
-The most useful contributions are better face alignment, evaluated streaming visual checkpoints, personalized command recognition with an abstain option, and reproducible held-out evaluations. [Research and methodology](docs/RESEARCH.md) · [Measurements and verification limits](docs/MEASUREMENTS.md) · [Prioritized roadmap](docs/ROADMAP.md)
+Start with the [current implementation audit and frozen diagnostic baseline](docs/RECOGNITION_AUDIT.md), then [evaluate one incremental change](docs/EVALUATION.md). Existing candidates, language modeling, optional context selection, uncertainty guards and command confirmations should be reused. No new recognizer or LLM layer is justified by the available diagnostic clip. [Research and methodology](docs/RESEARCH.md) · [Measurements and verification limits](docs/MEASUREMENTS.md) · [Prioritized roadmap](docs/ROADMAP.md)
 
 ## Develop without downloading models
 
