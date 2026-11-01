@@ -42,10 +42,6 @@ class StreamSession:
         if self.visual:
             await self.loop.run_in_executor(self.runtime.mouth_executor, self.mouth.reset)
         self.session_id = secrets.token_urlsafe(12)
-        self.sessions = self.runtime.state.setdefault("turn_sessions", {})
-        self.sessions[self.session_id] = {"turn": 0, "at": time.monotonic()}
-        for old in list(self.sessions)[:-8]:
-            self.sessions.pop(old, None)
         self.conversation = self.hello.get("conversation") is True
         self.mode = self.hello.get("mode", "live")
         self.mode = self.mode if self.mode in {"live", "phrase"} else "live"
@@ -97,12 +93,6 @@ class StreamSession:
         if result:
             if result["auto_send"]:
                 result.update(self.guard.assess(result, endpoint))
-            if turn_id < self.active_turn:
-                result.update(
-                    auto_send=False,
-                    needs_review=True,
-                    review_reason="A newer phrase superseded this reading.",
-                )
             if len(result["text"]) > 1200:
                 result.update(
                     auto_send=False,
@@ -140,11 +130,7 @@ class StreamSession:
                 self.active_turn += 1
                 self.speech_open = True
                 self.mouth_speaking = True
-                self.sessions[self.session_id]["turn"] = self.active_turn
                 self.utterances.start(self.active_turn, start)
-                activity["interrupted"] = (
-                    self.runtime.agent_store.interrupt() if self.conversation else []
-                )
             elif activity["event"] == "stopped":
                 self.mouth_speaking = False
                 if self.mode == "live":
@@ -373,7 +359,6 @@ class StreamSession:
                     elif control.get("type") in {"commit", "finish"}:
                         if self.visual and (not self.active_turn):
                             self.active_turn += 1
-                            self.sessions[self.session_id]["turn"] = self.active_turn
                             self.utterances.start(
                                 self.active_turn,
                                 self.buffer.frames[0][0] if self.buffer.frames else 0,

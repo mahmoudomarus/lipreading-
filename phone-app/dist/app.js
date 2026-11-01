@@ -67,7 +67,7 @@ const agentUI = createAgentUI({
     latestAgent = job;
   },
   onSettings: () => openSettings(),
-  onInterrupt: () => {
+  onStopAudio: () => {
     voiceEpoch++;
     audio.stop();
     voiceBusy = false;
@@ -750,7 +750,7 @@ function commitSentence() {
   }
 }
 $('commit').onclick = commitSentence;
-$('camera-interrupt').onclick = () => agentUI.interrupt();
+$('camera-cancel-all').onclick = () => agentUI.cancelAll();
 $('flip').onclick = () => {
   if (connecting || finishing) return;
   facing = facing === 'user' ? 'environment' : 'user';

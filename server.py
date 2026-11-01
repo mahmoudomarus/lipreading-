@@ -134,7 +134,7 @@ async def provider_connect(request: Request):
     if any(
         (
             job["state"] in {"queued", "thinking", "researching"}
-            for job in runtime.agent_store.list()
+            for job in await runtime.agent_store.async_db(runtime.agent_store.list)
         )
     ):
         raise HTTPException(409, "Wait for queued requests before changing the model connection.")
@@ -193,8 +193,8 @@ async def agent_jobs(request: Request):
     runtime = request.app.state.runtime
     authorize_request(request)
     return {
-        "jobs": runtime.agent_store.list(),
-        "timers": runtime.agent_store.timers(),
+        "jobs": await runtime.agent_store.async_db(runtime.agent_store.list),
+        "timers": await runtime.agent_store.async_db(runtime.agent_store.timers),
         "server_time": time.time(),
     }
 
@@ -206,24 +206,22 @@ async def agent_submit(request: Request):
     body = await small_json(request, 3000)
     if not runtime.provider.enabled:
         raise HTTPException(400, "Connect a model in Settings first.")
-    session = body.get("session_id")
-    if session is not None:
-        current = runtime.state.get("turn_sessions", {}).get(session)
-        if not current or current["turn"] != body.get("turn_id"):
-            raise HTTPException(409, "A newer spoken turn superseded that request.")
     try:
-        return runtime.agent_store.submit(
-            body.get("text"), body.get("source"), body.get("request_id")
+        return await runtime.agent_store.async_db(
+            runtime.agent_store.submit, body.get("text"), body.get("source"), body.get("request_id")
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None
 
 
-@router.post("/api/agent/interrupt")
-async def interrupt_agent(request: Request):
+@router.post("/api/agent/cancel-all")
+async def cancel_all_agents(request: Request):
     runtime = request.app.state.runtime
     authorize_request(request)
-    return {"interrupted": runtime.agent_store.interrupt()}
+    return {
+        "cancelled": await runtime.agent_store.async_db(runtime.agent_store.cancel_all),
+        "jobs": await runtime.agent_store.async_db(runtime.agent_store.list),
+    }
 
 
 @router.post("/api/agent/jobs/{job_id}/{operation}")
@@ -232,11 +230,11 @@ async def agent_operation(job_id: str, operation: str, request: Request):
     authorize_request(request)
     try:
         if operation == "confirm":
-            return runtime.agent_store.confirm(job_id)
+            return await runtime.agent_store.async_db(runtime.agent_store.confirm, job_id)
         if operation == "cancel":
-            return runtime.agent_store.cancel(job_id)
+            return await runtime.agent_store.async_db(runtime.agent_store.cancel, job_id)
         if operation == "dismiss":
-            return runtime.agent_store.dismiss(job_id)
+            return await runtime.agent_store.async_db(runtime.agent_store.dismiss, job_id)
         raise ValueError("Unknown operation.")
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None

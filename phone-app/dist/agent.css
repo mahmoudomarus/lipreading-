@@ -821,6 +821,6 @@ select:focus-visible {
     sans-serif;
   color: #d8e6d0;
 }
-#camera-interrupt {
+#camera-cancel-all {
   min-width: 64px;
 }

@@ -98,7 +98,7 @@ class ResearchTests(unittest.IsolatedAsyncioTestCase):
             await store.run_once(Provider())
             self.assertEqual(store.get(job["id"])["result"][0]["result"]["title"], "Plan")
 
-    async def test_interrupt_releases_the_worker_and_prevents_late_completion(self):
+    async def test_cancel_releases_the_worker_and_prevents_late_completion(self):
         with tempfile.TemporaryDirectory() as folder:
             store = AgentStore(Path(folder) / "jobs.db")
             entered = asyncio.Event()
@@ -125,14 +125,14 @@ class ResearchTests(unittest.IsolatedAsyncioTestCase):
             worker = asyncio.create_task(store.worker(Provider()))
             try:
                 await asyncio.wait_for(entered.wait(), 2)
-                self.assertIn(old["id"], store.interrupt())
+                self.assertEqual(store.cancel(old["id"])["state"], "cancelled")
                 new = store.submit("New question", "typed", str(uuid.uuid4()))
                 await asyncio.wait_for(cancelled.wait(), 2)
                 for _ in range(40):
                     if store.get(new["id"])["state"] == "completed":
                         break
                     await asyncio.sleep(0.05)
-                self.assertEqual(store.get(old["id"])["state"], "interrupted")
+                self.assertEqual(store.get(old["id"])["state"], "cancelled")
                 self.assertEqual(store.get(new["id"])["state"], "completed")
             finally:
                 worker.cancel()

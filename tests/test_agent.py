@@ -273,7 +273,7 @@ class AgentTests(unittest.IsolatedAsyncioTestCase):
         await self.store.run_once(Provider())
         self.assertEqual(captured[0]["conversation"], [])
 
-    async def test_dismiss_during_model_call_cannot_be_overwritten_by_its_reply(self):
+    async def test_cancel_during_model_call_cannot_be_overwritten_by_its_reply(self):
         job = self.submit("An uncertain input", source="lip_prediction")
         store = self.store
 
@@ -282,11 +282,11 @@ class AgentTests(unittest.IsolatedAsyncioTestCase):
                 return self
 
             async def complete(self, *args, **kwargs):
-                store.dismiss(job["id"])
+                store.cancel(job["id"])
                 return json.dumps({"answer": "Ignored answer", "actions": []})
 
         await store.run_once(Provider())
-        self.assertEqual(store.get(job["id"])["state"], "dismissed")
+        self.assertEqual(store.get(job["id"])["state"], "cancelled")
 
     def test_drafts_cannot_enter_agent_queue(self):
         with self.assertRaises(ValueError):

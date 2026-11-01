@@ -50,16 +50,18 @@ queued -> thinking -> completed                 answer or read-only tools
                  -> review -> completed         confirmed local writes
                            -> cancelled
 queued -> cancelled
-queued, thinking, researching, review -> interrupted
+queued, thinking, researching, review -> cancelled
 thinking, researching -> failed                 request failure or restart
 any automatic lip job -> dismissed              excluded from future context
 ```
 
 A UUID identifies each input. Same UUID and input returns the existing job; changed input is rejected. Plans are validated against a local tool allowlist and argument bounds. Notes and timers require explicit confirmation. Local effects and their receipts commit in one SQLite transaction. Repeated confirmation returns the completed result. Plans remain available after failures. Research jobs count toward the queue limit.
 
-The planner receives up to four completed request/reply/receipt turns. Dismissed or interrupted jobs are excluded. Pending HTTP work can be cancelled independently of camera capture; stale session/turn requests and late terminal-state updates are rejected. Already completed effects are not undone. Job polling continues without a camera socket because agent work can outlive capture.
+The planner receives up to four completed request/reply/receipt turns. Dismissed and cancelled jobs are excluded. Pending HTTP work can be cancelled explicitly; late terminal-state updates are rejected. Speech never cancels tasks and each eligible final turn is independently submitted. Already completed effects are not undone. Job polling continues without a camera socket because agent work can outlive capture.
 
-SQLite operations are short synchronous transactions within a single-user service. Their lock timeout can still block an async caller under contention. A multi-user deployment needs asynchronous database boundaries and isolation; current software tests do not establish that capacity.
+The worker maintains at most `AGENT_MAX_CONCURRENT_JOBS` tasks (default 3), and claims queued work atomically. Each job uses its own provider snapshot and up to four completed earlier tasks; it does not await sibling tasks for context. Queue capacity checks and insertion share a transaction. Pending confirmations do not consume running slots and remain in listings beyond the thirty-job history window.
+
+Async routes and job processing offload SQLite transactions to threads. SQL operations are drained before cancellation cleanup; database locks therefore do not block camera event handling. Explicit Cancel and Stop all mark terminal cancellation before cancelling the corresponding provider await. Terminal guards prevent late plans, research or failures from restoring a cancelled task. Cancel and edit is an explicit per-job cancellation followed by a new UUID, so stale confirmations cannot execute replaced details.
 
 ## HTTP surface
 
@@ -74,7 +76,7 @@ All API HTTP routes require the app bearer token. Camera authentication occurs i
 | `POST /api/provider/voice` | Optional generated caption speech |
 | `GET/POST /api/agent/jobs` | Read or submit jobs |
 | `POST /api/agent/jobs/{id}/{confirm,cancel,dismiss}` | Existing review and correction operations |
-| `POST /api/agent/interrupt` | Interrupt pending jobs |
+| `POST /api/agent/cancel-all` | Cancel all queued, running and review jobs |
 | `POST /api/export` | Bounded MP4 conversion |
 
 The `/api/openai/*` compatibility routes remain available; new integrations use the generic provider routes. The API has no stable external versioning promise. [Setup](SETUP.md) and [security](../SECURITY.md) describe deployment and data boundaries.

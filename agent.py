@@ -6,6 +6,7 @@ import ast
 import asyncio
 import hashlib
 import json
+import logging
 import math
 import operator
 import os
@@ -15,6 +16,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+from config import agent_concurrency
 from provider import ProviderError
 from recognition_guard import review_reason
 from web_results import safe_url
@@ -30,6 +32,9 @@ TOOLS = {
     "draft_document",
 }
 WRITES = {"save_note", "start_timer"}
+ACTIVE_STATES = {"queued", "thinking", "researching", "review"}
+TERMINAL_STATES = {"cancelled", "dismissed", "completed", "failed"}
+log = logging.getLogger("lipread")
 SCHEMA = {
     "type": "object",
     "properties": {
@@ -129,7 +134,7 @@ def validate_plan(raw):
 
 class AgentStore:
     def __init__(self, path):
-        self._running_task = None
+        self._running_tasks = {}
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.db() as db:
@@ -150,6 +155,7 @@ class AgentStore:
 
     def recover(self):
         with self.db() as db:
+            db.execute("UPDATE jobs SET state='cancelled' WHERE state='interrupted'")
             db.execute(
                 "UPDATE jobs SET state='failed',error='Service restarted during the model request. Review and retry.',updated=? WHERE state IN ('thinking','researching')",
                 (time.time(),),
@@ -172,6 +178,7 @@ class AgentStore:
                 raise ValueError(reason + " Edit the caption to send a correction.")
         fingerprint = hashlib.sha256((source + "\0" + text.strip()).encode()).hexdigest()
         with self.db() as db:
+            db.execute("BEGIN IMMEDIATE")
             existing = db.execute("SELECT * FROM jobs WHERE id=?", (request_id,)).fetchone()
             if existing:
                 if existing["fingerprint"] != fingerprint:
@@ -196,6 +203,8 @@ class AgentStore:
         if row is None:
             raise ValueError("Request not found.")
         data = dict(row)
+        if data["state"] == "interrupted":
+            data["state"] = "cancelled"
         data.pop("fingerprint", None)
         for key in ("plan", "result"):
             data[key] = json.loads(data[key]) if data[key] else None
@@ -209,13 +218,15 @@ class AgentStore:
         with self.db() as db:
             return [
                 self.unpack(r)
-                for r in db.execute("SELECT * FROM jobs ORDER BY created DESC LIMIT 30")
-            ][::-1]
+                for r in db.execute(
+                    "SELECT * FROM jobs WHERE state IN ('queued','thinking','researching','review') OR id IN (SELECT id FROM jobs ORDER BY created DESC LIMIT 30) ORDER BY created"
+                )
+            ]
 
     def update(self, id, state, *, plan=None, error=None):
         with self.db() as db:
             db.execute(
-                "UPDATE jobs SET state=?,plan=COALESCE(?,plan),error=?,updated=? WHERE id=? AND state NOT IN ('dismissed','interrupted')",
+                "UPDATE jobs SET state=?,plan=COALESCE(?,plan),error=?,updated=? WHERE id=? AND state NOT IN ('dismissed','cancelled','completed','failed')",
                 (state, json.dumps(plan) if plan else None, error, time.time(), id),
             )
 
@@ -281,21 +292,32 @@ class AgentStore:
     def cancel(self, id):
         with self.db() as db:
             db.execute(
-                "UPDATE jobs SET state='cancelled',updated=? WHERE id=? AND state IN ('queued','review')",
+                "UPDATE jobs SET state='cancelled',updated=? WHERE id=? AND state IN ('queued','thinking','researching','review')",
                 (time.time(), id),
             )
+        self._cancel_tasks([id])
         return self.get(id)
+
+    def _cancel_tasks(self, ids):
+        # DB methods may run in a worker thread; task cancellation belongs to its loop.
+        for id in ids:
+            task = self._running_tasks.get(id)
+            if task and not task.done() and not task.get_loop().is_closed():
+                task.get_loop().call_soon_threadsafe(task.cancel)
 
     def dismiss(self, id):
         job = self.get(id)
+        if job["state"] in ACTIVE_STATES:
+            raise ValueError("Cancel this task before ignoring it.")
         if job["source"] != "lip_prediction":
             raise ValueError("Only automatic lip predictions use this correction control.")
         with self.db() as db:
             db.execute("UPDATE jobs SET state='dismissed',updated=? WHERE id=?", (time.time(), id))
         return self.get(id)
 
-    def interrupt(self):
+    def cancel_all(self):
         with self.db() as db:
+            db.execute("BEGIN IMMEDIATE")
             ids = [
                 r[0]
                 for r in db.execute(
@@ -303,11 +325,10 @@ class AgentStore:
                 )
             ]
             db.execute(
-                "UPDATE jobs SET state='interrupted',updated=? WHERE state IN ('queued','thinking','researching','review')",
+                "UPDATE jobs SET state='cancelled',updated=? WHERE state IN ('queued','thinking','researching','review')",
                 (time.time(),),
             )
-        if self._running_task and not self._running_task.done():
-            self._running_task.cancel()
+        self._cancel_tasks(ids)
         return ids
 
     def complete_research(self, id, report):
@@ -324,29 +345,52 @@ class AgentStore:
                 dict(r) for r in db.execute("SELECT * FROM timers ORDER BY created DESC LIMIT 20")
             ]
 
-    async def run_once(self, provider):
+    async def async_db(self, function, *args, **kwargs):
+        """Drain a cancelled SQL operation before its caller changes terminal state."""
+        work = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+        try:
+            return await asyncio.shield(work)
+        except asyncio.CancelledError:
+            await work
+            raise
+
+    def claim(self):
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute(
                 "SELECT * FROM jobs WHERE state='queued' ORDER BY created LIMIT 1"
             ).fetchone()
-            if not row:
-                return False
+            if row is None:
+                return None
             db.execute(
                 "UPDATE jobs SET state='thinking',updated=? WHERE id=?", (time.time(), row["id"])
             )
+            return dict(row)
+
+    def context_before(self, created):
+        with self.db() as db:
+            rows = db.execute(
+                "SELECT * FROM jobs WHERE state='completed' AND created<? AND plan IS NOT NULL ORDER BY created DESC LIMIT 4",
+                (created,),
+            ).fetchall()[::-1]
+        return [
+            {
+                "request": row["input"],
+                "reply": json.loads(row["plan"])["answer"],
+                "receipts": (row["result"] or "null")[:8000],
+            }
+            for row in rows
+        ]
+
+    async def process(self, provider, row):
+        id = row["id"]
         try:
-            previous = [
-                {
-                    "request": j["input"],
-                    "reply": j["plan"]["answer"],
-                    "receipts": json.dumps(j["result"])[:8000],
-                }
-                for j in self.list()
-                if j["created"] < row["created"] and j["state"] == "completed" and j["plan"]
-            ][-4:]
+            if (await self.async_db(self.get, id))["state"] in TERMINAL_STATES:
+                return
+            connection = provider.snapshot()
+            previous = await self.async_db(self.context_before, row["created"])
             async with asyncio.timeout(30):
-                raw = await provider.snapshot().complete(
+                raw = await connection.complete(
                     INSTRUCTIONS,
                     json.dumps(
                         {
@@ -354,9 +398,9 @@ class AgentStore:
                             "source": row["source"],
                             "conversation": previous,
                             "capabilities": {
-                                "research_available": getattr(provider, "config", lambda: {})().get(
-                                    "research_available", False
-                                )
+                                "research_available": getattr(
+                                    connection, "config", lambda: {}
+                                )().get("research_available", False)
                             },
                         }
                     ),
@@ -364,44 +408,81 @@ class AgentStore:
                     maximum=3000,
                 )
             plan = validate_plan(raw)
-            if self.get(row["id"])["state"] in {"dismissed", "interrupted"}:
-                return True
+            if (await self.async_db(self.get, id))["state"] in TERMINAL_STATES:
+                return
             if any(a["name"] == "research" for a in plan["actions"]):
-                self.update(row["id"], "researching", plan=plan)
+                await self.async_db(self.update, id, "researching", plan=plan)
+                if (await self.async_db(self.get, id))["state"] != "researching":
+                    return
                 async with asyncio.timeout(60):
-                    report = await provider.snapshot().research(plan["actions"][0]["text"])
-                self.complete_research(row["id"], report)
-                return True
-            self.update(row["id"], "review", plan=plan)
-            # Read-only tools and answers do not wait for a second confirmation.
+                    report = await connection.research(plan["actions"][0]["text"])
+                await self.async_db(self.complete_research, id, report)
+                return
+            await self.async_db(self.update, id, "review", plan=plan)
             if not any(a["name"] in WRITES for a in plan["actions"]):
-                self.confirm(row["id"])
+                # A user cancellation can win before this transaction. Confirm then
+                # rejects it, and the terminal-state guard keeps the cancellation.
+                await self.async_db(self.confirm, id)
         except asyncio.CancelledError:
-            self.update(row["id"], "failed", error="Service stopped. Review and retry.")
+            if (await self.async_db(self.get, id))["state"] not in TERMINAL_STATES:
+                await self.async_db(
+                    self.update, id, "failed", error="Service stopped. Review and retry."
+                )
             raise
         except Exception as exc:
-            self.update(
-                row["id"],
+            await self.async_db(
+                self.update,
+                id,
                 "failed",
                 error=str(exc)
                 if isinstance(exc, ProviderError)
                 else "The request failed. Nothing was executed.",
             )
+
+    def start_job(self, provider, row):
+        task = asyncio.create_task(self.process(provider, row), name="agent-" + row["id"])
+        self._running_tasks[row["id"]] = task
+        return task
+
+    async def run_once(self, provider):
+        row = await self.async_db(self.claim)
+        if row is None:
+            return False
+        task = self.start_job(provider, row)
+        try:
+            await task
+        except asyncio.CancelledError:
+            if asyncio.current_task().cancelling():
+                raise
+        finally:
+            self._running_tasks.pop(row["id"], None)
         return True
 
-    async def worker(self, provider):
-        self.recover()
-        while True:
-            task = asyncio.create_task(self.run_once(provider))
-            self._running_task = task
-            try:
-                worked = await task
-            except asyncio.CancelledError:
-                if asyncio.current_task().cancelling():
-                    raise
-                worked = True  # An explicit user interruption cancelled only this job.
-            finally:
-                if self._running_task is task:
-                    self._running_task = None
-            if not worked:
-                await asyncio.sleep(0.25)
+    async def worker(self, provider, *, max_concurrent_jobs=None):
+        limit = agent_concurrency() if max_concurrent_jobs is None else max_concurrent_jobs
+        if type(limit) is not int or not 1 <= limit <= 12:
+            raise ValueError("Concurrent jobs must be an integer from 1 to 12.")
+        await self.async_db(self.recover)
+        try:
+            while True:
+                for id, task in list(self._running_tasks.items()):
+                    if task.done():
+                        self._running_tasks.pop(id)
+                        if not task.cancelled() and (error := task.exception()) is not None:
+                            log.error(
+                                "Agent task failed",
+                                exc_info=(type(error), error, error.__traceback__),
+                            )
+                while len(self._running_tasks) < limit:
+                    row = await self.async_db(self.claim)
+                    if row is None:
+                        break
+                    self.start_job(provider, row)
+                await asyncio.sleep(0.1 if self._running_tasks else 0.25)
+        finally:
+            tasks = list(self._running_tasks.values())
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            self._running_tasks.clear()
+            await self.async_db(self.recover)

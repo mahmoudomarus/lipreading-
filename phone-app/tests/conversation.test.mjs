@@ -125,11 +125,44 @@ test('an unsupported final caption is held for correction and never auto-sent', 
   assert.equal(held.length, 1);
 });
 
-test('visual-turn scope travels with the request so a stale turn can be rejected', async () => {
+test('each finalized turn is sent even if another turn has already arrived', async () => {
   const sent = [];
-  const flow = createConversation({ send: async (body) => sent.push(body), makeId: () => 'id' });
-  flow.offer({ ...result('a'), session_id: 'camera-session', turn_id: 4 });
+  let next = 0;
+  const flow = createConversation({
+    send: async (body) => sent.push(body),
+    makeId: () => 'id-' + next++,
+  });
+  flow.offer({ ...result('new', 'Newer request'), turn_id: 5 });
+  flow.offer({ ...result('old', 'Earlier finished request'), turn_id: 4 });
   await flow.settled();
-  assert.equal(sent[0].session_id, 'camera-session');
-  assert.equal(sent[0].turn_id, 4);
+  assert.deepEqual(
+    sent.map((body) => body.text),
+    ['Newer request', 'Earlier finished request'],
+  );
+  assert.notEqual(sent[0].request_id, sent[1].request_id);
+});
+
+test('explicit Stop all clears queued turns and cancels a late acknowledgement', async () => {
+  const sent = [],
+    cancelled = [];
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const flow = createConversation({
+    send: async (body) => {
+      sent.push(body);
+      await gate;
+      return { id: body.request_id };
+    },
+    cancel: async (job) => cancelled.push(job.id),
+    makeId: () => 'first-id',
+  });
+  flow.offer(result('first'));
+  flow.offer(result('second'));
+  flow.cancelPending();
+  release();
+  await flow.settled();
+  assert.equal(sent.length, 1);
+  assert.deepEqual(cancelled, ['first-id']);
 });

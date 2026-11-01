@@ -4,6 +4,7 @@ export function createConversation({
   onError,
   onQueue,
   onHold,
+  cancel,
   makeId = () => crypto.randomUUID(),
 }) {
   const known = new Map();
@@ -11,6 +12,7 @@ export function createConversation({
   let enabled = true;
   let running = false;
   let idle = Promise.resolve();
+  let current = null;
 
   async function drain() {
     if (running) return;
@@ -18,22 +20,26 @@ export function createConversation({
     try {
       while (enabled && queue.length) {
         const turn = queue.shift();
+        current = turn;
         turn.state = 'sending';
         onQueue?.(queue.length + 1);
         try {
-          await send({
+          const job = await send({
             text: turn.text,
             source: 'lip_prediction',
             request_id: turn.id,
-            ...turn.scope,
           });
-          turn.state = 'sent';
+          if (turn.state === 'cancelled') await cancel?.(job);
+          else turn.state = 'sent';
         } catch (error) {
-          turn.state = 'failed';
-          onError?.(error, turn);
+          if (turn.state !== 'cancelled') {
+            turn.state = 'failed';
+            onError?.(error, turn);
+          }
         }
       }
     } finally {
+      current = null;
       running = false;
       onQueue?.(queue.length);
     }
@@ -57,11 +63,7 @@ export function createConversation({
         onError?.(new Error('Conversation is busy. Pause and try that phrase again.'));
         return false;
       }
-      const scope =
-        entry.session_id && Number.isInteger(entry.turn_id)
-          ? { session_id: entry.session_id, turn_id: entry.turn_id }
-          : {};
-      const turn = { key: entry.id, id: makeId(), text: entry.text.trim(), state: 'queued', scope };
+      const turn = { key: entry.id, id: makeId(), text: entry.text.trim(), state: 'queued' };
       known.set(entry.id, turn);
       // Keep only a bounded deduplication window; the server also deduplicates request UUIDs.
       if (known.size > 500) known.delete(known.keys().next().value);
@@ -76,7 +78,8 @@ export function createConversation({
       pump();
       return true;
     },
-    interrupt() {
+    cancelPending() {
+      if (current) current.state = 'cancelled';
       for (const turn of queue) turn.state = 'cancelled';
       queue.length = 0;
     },

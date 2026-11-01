@@ -6,9 +6,11 @@ A local face-landmarker checks normalized lip-shape changes at roughly eight sam
 
 Consumed decoder windows form a single final request. Intermediate chunks remain captions and do not become separate agent jobs. Final turns retain actual draft evidence and bounded alternatives; an uncertain part holds the whole turn for review. Compare readings is available only when at least two distinct supported readings exist. It selects among candidates without rewriting them.
 
-With Live replies enabled, renewed sustained motion interrupts queued, thinking, researching and unconfirmed jobs. The worker cancels its active await. Session/turn identifiers reject stale submissions, and terminal-state checks reject late completion. Completed actions remain completed. Live replies can be turned off for manual review.
+With Live replies enabled, every eligible finalized turn becomes its own task. A newer turn does not suppress an older finished reading. Lip movement only stops generated caption audio; it never changes job state or clears unsent requests. Live replies can be disabled for manual review.
 
-The UI shows Listening, Finishing, Thinking, Researching and Your turn. Stop answer and Interrupt are manual controls. Generated caption audio stops on interruption; generated agent speech is not automatic.
+Agent work runs concurrently up to `AGENT_MAX_CONCURRENT_JOBS` (default 3). Pending confirmations remain available. Cancel stops a selected queued, thinking, researching or review job. Stop all cancels all those jobs and unsent client requests. Cancel and edit replaces the selected task with a new request UUID after cancelling the old one. Completed effects are not undone. A provider can continue processing/billing after local cancellation.
+
+The UI shows listening and finishing separately from the background task count. Generated agent speech is not automatic. Job polling continues without a camera socket because background work can outlive capture.
 
 ## Work in chat
 

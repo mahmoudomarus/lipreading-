@@ -49,7 +49,7 @@ Asset URLs are upstream download locations. The checksums record the development
 .venv/bin/python scripts/serve.py
 ```
 
-The service binds to `127.0.0.1:8765`, starts a temporary HTTPS tunnel, and prints a private phone link and QR code. Model loading continues in the background. Wait until the page says it is ready, then allow camera access. Use Safari or Chrome, keep the page visible, face the lens in good light, and speak a short phrase naturally. **Live replies** is on by default: finalized predictions go to the agent as you pause. **Finish sentence** is a fallback when a pause is missed. Switch Live replies off for manual review. Notes and timers still wait for action confirmation. With the face-landmarker asset installed, sustained lip movement starts a turn and a visual pause ends it; move your lips again to interrupt a pending answer. See [turn-taking](TURN_TAKING.md).
+The service binds to `127.0.0.1:8765`, starts a temporary HTTPS tunnel, and prints a private phone link and QR code. Model loading continues in the background. Wait until the page says it is ready, then allow camera access. Use Safari or Chrome, keep the page visible, face the lens in good light, and speak a short phrase naturally. **Live replies** is on by default: finalized predictions go to the agent as you pause. **Finish sentence** is a fallback when a pause is missed. Switch Live replies off for manual review. Notes and timers still wait for action confirmation. With the face-landmarker asset installed, sustained lip movement starts a turn and a visual pause ends it; continue speaking while background tasks keep running; lip movement only silences generated audio. See [turn-taking](TURN_TAKING.md).
 
 The link contains the app's access token in its fragment. Treat it as a password. It is different from a model-provider API key. Links are stripped from the address bar after connection; the connection is kept in browser session storage. Tunnel origins change when restarted. A static preview alone cannot run inference: the computer service is required.
 
@@ -73,6 +73,7 @@ export AGENT_MODEL=your-installed-model
 | `AGENT_PROTOCOL` | `responses` or `chat` |
 | `AGENT_BASE_URL` | API base, such as a compatible endpoint ending in `/v1` |
 | `AGENT_MODEL` | Exact model ID supported by that endpoint |
+| `AGENT_MAX_CONCURRENT_JOBS` | Concurrent agent tasks, 1 to 12, default 3 |
 | `AGENT_API_KEY` | Optional local-server key or required hosted-provider key |
 | `LIPREAD_DEVICE` | `cpu` (default), `auto`, or experimental `mps` |
 | `LIPREAD_THREADS` | CPU threads; default 4 |
@@ -92,7 +93,7 @@ Optional context assistance selects among existing visual hypotheses, without ve
 .venv/bin/python scripts/service.py stop
 ```
 
-Use either the foreground launcher or detached launcher, not both. The manager starts its own server/tunnel and writes PID, logs, and links in `.runtime/`. It does not install a login item, restart on system reboot, or prevent computer sleep. Restarting after changing environment variables loads the new process environment. A server restart marks interrupted model calls failed instead of silently replaying them; queued jobs resume.
+Use either the foreground launcher or detached launcher, not both. The manager starts its own server/tunnel and writes PID, logs, and links in `.runtime/`. It does not install a login item, restart on system reboot, or prevent computer sleep. Restarting after changing environment variables loads the new process environment. A server restart marks in-flight model calls failed instead of replaying them; queued jobs resume and pending confirmations remain available.
 
 Agent work can complete while the browser is closed. Timer due times persist and update after reconnecting, but there are no closed-phone push notifications or alarm sounds. Phone camera capture pauses when the page becomes hidden. iOS does not support the locked/background camera experience this prototype would otherwise need.
 

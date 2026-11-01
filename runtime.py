@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from agent import AgentStore
+from config import agent_concurrency
 from engine import LipReader, QualityMonitor
 from openai_bridge import OpenAIBridge
 from provider import TextProvider
@@ -22,6 +23,7 @@ class Runtime:
     def __init__(self, runtime_dir=None, *, load_models=True):
         self.directory = Path(runtime_dir) if runtime_dir is not None else ROOT / ".runtime"
         self.load_models = load_models
+        self.max_concurrent_jobs = agent_concurrency()
         self.token = None
         self.state = {
             "mouth": None,
@@ -54,7 +56,9 @@ class Runtime:
         self.openai_bridge = OpenAIBridge()
         self.agent_store = await asyncio.to_thread(AgentStore, self.directory / "agent.sqlite3")
         self.model_task = asyncio.create_task(self.load_model()) if self.load_models else None
-        self.worker = asyncio.create_task(self.agent_store.worker(self.provider))
+        self.worker = asyncio.create_task(
+            self.agent_store.worker(self.provider, max_concurrent_jobs=self.max_concurrent_jobs)
+        )
 
     async def load_model(self):
         loop = asyncio.get_running_loop()

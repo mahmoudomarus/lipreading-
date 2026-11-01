@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -52,6 +53,24 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
 
         self.session = StreamSession(self.runtime, Socket(), {})
         await self.session.prepare()
+        self.runtime.worker.cancel()
+        await asyncio.gather(self.runtime.worker, return_exceptions=True)
+
+    async def test_lip_activity_leaves_thinking_and_confirmation_jobs_untouched(self):
+        store = self.runtime.agent_store
+        jobs = [store.submit(text, "typed", str(uuid.uuid4())) for text in ["thinking", "review"]]
+        store.update(jobs[0]["id"], "thinking")
+        store.update(jobs[1]["id"], "review")
+
+        class Mouth:
+            def check(self, frame, timestamp):
+                return {"event": "started", "speech_start": timestamp, "speaking": True}
+
+        self.session.mouth = Mouth()
+        self.session.conversation = True
+        await self.session.check_mouth(None, 0.5)
+        self.assertEqual([store.get(job["id"])["state"] for job in jobs], ["thinking", "review"])
+        self.assertNotIn("interrupted", self.events[0])
 
     async def test_held_part_remains_held_through_final_turn_processing(self):
         self.session.active_turn = 1
@@ -70,12 +89,12 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         await self.session.finish_turn(1, 5)
         self.assertEqual(len(self.events), 1)
 
-    async def test_newer_turn_holds_a_late_reading(self):
+    async def test_newer_turn_does_not_drop_a_finished_reading(self):
         self.session.active_turn = 2
         self.session.utterances.add(1, 1, {"text": "hello there", "auto_send": True})
         await self.session.finish_turn(1, 4)
-        self.assertFalse(self.events[0]["auto_send"])
-        self.assertIn("superseded", self.events[0]["review_reason"])
+        self.assertTrue(self.events[0]["auto_send"])
+        self.assertEqual(self.events[0]["text"], "hello there")
 
     async def test_failed_task_is_cleared_once_instead_of_poisoning_schedule(self):
         async def failure():

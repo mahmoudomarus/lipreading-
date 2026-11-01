@@ -1,6 +1,7 @@
 import io
 import struct
 import unittest
+import uuid
 
 import cv2
 import numpy as np
@@ -47,6 +48,25 @@ class CaptureTests(unittest.TestCase):
 
 
 class EndpointTests(RuntimeTestCase):
+    def test_finished_older_turn_is_accepted_as_an_independent_task(self):
+        self.runtime.provider.enabled = True
+        self.runtime.state["turn_sessions"] = {"camera": {"turn": 5}}
+        headers = {"Authorization": "Bearer " + self.runtime.token}
+        for turn in [5, 4]:
+            response = self.client.post(
+                "/api/agent/jobs",
+                headers=headers,
+                json={
+                    "text": "hello there",
+                    "source": "lip_prediction",
+                    "request_id": str(uuid.uuid4()),
+                    "session_id": "camera",
+                    "turn_id": turn,
+                },
+            )
+            self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(len(self.runtime.agent_store.list()), 2)
+
     def test_status_requires_private_key(self):
         self.assertEqual(self.client.get("/api/status").status_code, 401)
         response = self.client.get(

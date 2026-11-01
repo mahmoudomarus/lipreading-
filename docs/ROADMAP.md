@@ -9,7 +9,7 @@ The concept is a silent interface to useful software. The bottleneck is trustwor
 | 3 | Investigate observed crop, capture and timing errors | Change one existing component at a time only where labeled failures justify it; same-clip WER and latency, including regressions |
 | 4 | Evaluate existing candidates/context selection and guards | Candidate oracle WER, selection mistakes and added latency; validation-only threshold calibration and held-out acceptance/clarification tradeoff; no duplicate LLM layer |
 | 5 | Reduce waste in inference and transport | Stage-level timing, memory/capture continuity, numerical or transcript equivalence where claimed, controlled warmup/load |
-| 6 | Improve agent portability and execution | Protocol fixtures, malformed responses, timeouts, retries, interrupted jobs, duplicate requests/confirmation and provider swaps |
+| 6 | Improve agent portability and execution | Protocol fixtures, malformed responses, timeouts, retries, cancelled jobs, duplicate requests/confirmation and provider swaps |
 | 7 | Expand device usability | Documented iPhone/Android/browser recordings, rotation, camera permissions, wake lock, accessibility and exported audio/video |
 
 ## Good first contributions

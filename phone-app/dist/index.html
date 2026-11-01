@@ -161,12 +161,12 @@
                 ><span id="start-label">Start conversation</span
                 ><span class="button-shortcut">↗</span></button
               ><button
-                id="camera-interrupt"
+                id="camera-cancel-all"
                 class="commit-button"
-                title="Interrupt the answer"
-                aria-label="Interrupt the current answer"
+                title="Cancel all pending tasks"
+                aria-label="Cancel all pending tasks"
               >
-                ↯<span>Interrupt</span></button
+                ↯<span>Stop all</span></button
               ><button
                 id="commit"
                 class="commit-button"
@@ -219,7 +219,7 @@
             </div>
             <div class="turn-bar">
               <span id="turn-state" data-phase="ready" role="status">Ready · speak and pause</span
-              ><button id="agent-interrupt" disabled>Stop answer</button>
+              ><button id="agent-cancel-all" disabled>Stop all</button>
             </div>
             <div id="agent-panel" class="agent-panel">
               <div id="agent-held" class="agent-held" hidden>

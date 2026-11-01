@@ -1,20 +1,26 @@
 import { createWorkCards } from './work-cards.js';
 import { createConversation } from './conversation.js';
-import { actionLabel, receiptText, mergeJobs } from './agent-core.js';
+import {
+  actionLabel,
+  receiptText,
+  mergeJobs,
+  jobCanCancel,
+  backgroundStatus,
+} from './agent-core.js';
 
 export function createAgentUI({
   requestAPI,
   getLatest,
   onState,
   onSettings,
-  onInterrupt = () => {},
+  onStopAudio = () => {},
   onLiveMode = () => {},
   onPhase = () => {},
 }) {
   const $ = (id) => document.getElementById(id);
   const workCards = createWorkCards();
-  let userSpeaking = false,
-    latestVisualTurn = 0;
+  let userSpeaking = false;
+  let pendingSends = 0;
   let jobs = [],
     timers = [],
     pollTimer,
@@ -58,19 +64,22 @@ export function createAgentUI({
       message('Sending your phrase…');
       const response = await requestAPI('/api/agent/jobs', { body });
       const job = await response.json();
-      if (body.turn_id && body.turn_id < latestVisualTurn) return;
       acceptJob(job);
-      message('Thinking… Keep speaking when you’re ready.');
+      message('Working in the background. You can keep talking.');
       if (failedTurn?.id === body.request_id) {
         failedTurn = null;
         $('agent-retry-auto').hidden = true;
       }
+      return job;
+    },
+    onQueue(count) {
+      pendingSends = count;
+      $('agent-cancel-all').disabled = !count && !jobs.some(jobCanCancel);
+    },
+    async cancel(job) {
+      if (job?.id) await operate(job, 'cancel', $('agent-cancel-all'));
     },
     onError(error, turn) {
-      if (/superseded/.test(error.message)) {
-        message('Listening to your new request.');
-        return;
-      }
       message(error.message);
       if (turn) failedTurn = turn;
       $('agent-retry-auto').hidden = !failedTurn;
@@ -96,40 +105,29 @@ export function createAgentUI({
     $('turn-state').dataset.phase = value;
     onPhase(value, text);
   }
-  function markInterrupted(ids) {
-    conversation.interrupt();
-    const set = new Set(ids);
-    jobs = jobs.map((job) =>
-      set.has(job.id)
-        ? { ...job, state: 'interrupted', updated: Date.now() / 1000 + serverOffset }
-        : job,
-    );
-    render();
-    onInterrupt();
-    if (jobs.length) onState(jobs.at(-1));
-  }
-  async function interrupt() {
-    onInterrupt();
-    conversation.interrupt();
-    phase('listening', 'Listening to you');
+  async function cancelAll() {
+    onStopAudio();
+    conversation.cancelPending();
     try {
-      const response = await requestAPI('/api/agent/interrupt');
-      markInterrupted((await response.json()).interrupted);
-      message('Interrupted. Ask your next question.');
+      const response = await requestAPI('/api/agent/cancel-all');
+      const result = await response.json();
+      jobs = mergeJobs(jobs, result.jobs);
+      render();
+      phase('ready', backgroundStatus(jobs).text);
+      message('Pending tasks cancelled. Completed work is unchanged.');
       schedule(50);
     } catch (error) {
       message(error.message);
     }
   }
-  $('agent-interrupt').onclick = interrupt;
+  $('agent-cancel-all').onclick = cancelAll;
   function speech(activity) {
+    if (activity.event === 'started') onStopAudio();
+    userSpeaking = $('agent-live-toggle').checked && activity.speaking;
     if (!$('agent-live-toggle').checked) return;
-    userSpeaking = activity.speaking;
     if (activity.event === 'started') {
-      latestVisualTurn = activity.turn_id;
-      markInterrupted(activity.interrupted || []);
       phase('listening', 'Listening to you');
-      message('Keep speaking. Pause when you’re done.');
+      message('Keep speaking. Background tasks will continue.');
     } else if (activity.event === 'stopped') {
       phase('finishing', 'You paused · finishing the phrase');
     } else if (!activity.available) {
@@ -153,7 +151,7 @@ export function createAgentUI({
     $('agent-source').textContent = 'PREDICTED WORDS · REVIEW BEFORE SENDING';
   }
   function review(entry, modal = false) {
-    const latest = jobs.at(-1);
+    const latest = [...jobs].reverse().find(jobCanCancel) || jobs.at(-1);
     if (modal && latest?.state === 'review') {
       $('agent-modal-source').textContent = 'Request: ' + latest.input;
       $('agent-modal-actions').textContent = latest.plan.actions.map(actionLabel).join('\n');
@@ -253,6 +251,7 @@ export function createAgentUI({
       render();
       onState(next);
       schedule(100);
+      return next;
     } catch (e) {
       message(e.message);
       button.disabled = false;
@@ -282,7 +281,7 @@ export function createAgentUI({
         ),
         node('p', '', job.input),
       );
-      if (job.source === 'lip_prediction' && job.state !== 'dismissed') {
+      if (job.source === 'lip_prediction' && job.state !== 'dismissed' && !jobCanCancel(job)) {
         const misread = node('button', 'misread-button', 'Misread · ignore');
         misread.onclick = () => operate(job, 'dismiss', misread);
         user.append(misread);
@@ -307,19 +306,17 @@ export function createAgentUI({
         );
         if (job.result?.length)
           answer.append(node('p', 'dismissed-note', 'Any tools already executed are not undone.'));
-      } else if (job.state === 'interrupted') {
-        answer.append(node('p', 'dismissed-note', 'Interrupted. Listening for your next request.'));
+      } else if (job.state === 'cancelled') {
+        answer.append(node('p', 'dismissed-note', 'Cancelled. Completed actions are not undone.'));
       } else if (job.plan) {
         if (job.plan.answer) answer.append(node('p', '', job.plan.answer));
         if (job.state === 'review') {
           for (const action of job.plan.actions)
             answer.append(node('p', 'action-preview', actionLabel(action)));
           const controls = node('div', 'agent-confirmation'),
-            confirm = node('button', '', 'Confirm actions ↗'),
-            cancel = node('button', '', 'Cancel');
+            confirm = node('button', '', 'Confirm actions ↗');
           confirm.onclick = () => operate(job, 'confirm', confirm);
-          cancel.onclick = () => operate(job, 'cancel', cancel);
-          controls.append(confirm, cancel);
+          controls.append(confirm);
           answer.append(controls);
         }
         for (const receipt of job.result || []) {
@@ -341,6 +338,29 @@ export function createAgentUI({
                     : 'Working…'),
           ),
         );
+      if (jobCanCancel(job)) {
+        const controls = node('div', 'agent-confirmation');
+        const cancel = node('button', '', 'Cancel');
+        cancel.onclick = () => operate(job, 'cancel', cancel);
+        const edit = node('button', '', 'Cancel and edit');
+        edit.onclick = async () => {
+          const next = await operate(job, 'cancel', edit);
+          if (!next) return;
+          composer.value = job.input;
+          source = job.source === 'lip_prediction' ? 'reviewed_lips' : job.source;
+          dirty = true;
+          pending = null;
+          view();
+          composer.focus();
+          message(
+            next.state === 'completed'
+              ? 'That task already completed. A new request will not undo it.'
+              : 'Old task cancelled. Edit and send a new request.',
+          );
+        };
+        controls.append(cancel, edit);
+        answer.append(controls);
+      }
       if (job.state === 'failed') {
         const retry = node('button', 'agent-retry', 'Edit and retry');
         retry.onclick = () => {
@@ -399,28 +419,24 @@ export function createAgentUI({
       serverOffset = data.server_time - Date.now() / 1000;
       render();
       renderTimers();
-      const active = jobs.some((job) => ['queued', 'thinking', 'researching'].includes(job.state));
-      $('agent-interrupt').disabled = !active;
+      const summary = backgroundStatus(jobs);
+      $('agent-cancel-all').disabled = !summary.active && !pendingSends;
       if (jobs.length) {
-        const latest = jobs.at(-1);
-        onState(latest);
+        const representative = [...jobs].reverse().find(jobCanCancel) || jobs.at(-1);
+        onState(representative);
         if (!userSpeaking) {
-          if (latest.state === 'researching')
-            phase('researching', 'Researching · checking sources');
-          else if (['queued', 'thinking'].includes(latest.state))
-            phase('thinking', 'Thinking · move your lips to interrupt');
-          else if (latest.state === 'completed') phase('ready', 'Your turn');
-          else if (latest.state === 'review') phase('review', 'Action ready for confirmation');
-        }
-        if (!userSpeaking && latest.state === 'completed')
-          message(
-            $('agent-live-toggle').checked
-              ? 'Your turn. Speak and pause for a reply.'
-              : 'Review or type your next request.',
+          phase(
+            summary.running || summary.queued ? 'working' : summary.review ? 'review' : 'ready',
+            summary.text,
           );
-        else if (!userSpeaking && latest.state === 'review')
-          message('Action ready. Confirm it below to continue.');
-        else if (!userSpeaking && latest.state === 'thinking') message('Thinking…');
+          message(
+            summary.running || summary.queued
+              ? summary.text + '. You can keep talking.'
+              : summary.review
+                ? 'Confirm or cancel each pending action when ready.'
+                : 'Your turn. Speak and pause for another task.',
+          );
+        }
       }
     } catch (e) {
       message(e.message);
@@ -451,11 +467,10 @@ export function createAgentUI({
     },
     review,
     speech,
-    interrupt,
+    cancelAll,
     offerCaption(entry) {
       if ($('agent-live-toggle').checked) {
-        if (entry.turn_id && entry.turn_id < latestVisualTurn) return;
-        phase('thinking', 'Thinking · move your lips to interrupt');
+        phase('working', 'Working in the background · you can keep talking');
         conversation.offer(entry);
       } else if (!dirty && !sending && !dialog.open) fill(entry);
     },

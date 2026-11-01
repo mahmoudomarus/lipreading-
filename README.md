@@ -12,7 +12,7 @@ Lipread Lab is an experimental phone-camera interface for a small agent. Mouth a
 
 - Phone camera → authenticated video stream → visual-only English captions on your computer.
 - Live replies send eligible finalized predictions automatically. Silence, unsupported/repetitive decodes, and recent repeated long readings are held back for correction. Use **Misread · ignore** to remove a mistaken turn from future context. Switch off Live replies for editable manual review. Provisional drafts never reach the agent.
-- Visual pause detection and interruption: renewed lip movement can cancel a pending answer.
+- Visual pause detection completes each eligible spoken turn independently. Speaking stops generated audio playback but leaves background tasks and pending confirmations alone.
 - Questions, notes, timers, arithmetic, cited web research, page previews, and downloadable Markdown drafts.
 - Action previews for notes and timers, persisted execution receipts, and duplicate-request protection.
 - Replaceable hosted/local text models through Responses or Chat-compatible APIs.
@@ -20,6 +20,14 @@ Lipread Lab is an experimental phone-camera interface for a small agent. Mouth a
 - Background computer jobs. Phone camera capture requires a visible page; locked-phone capture and push alarms are not supported.
 
 Web research and sandboxed page-preview cards are included. Arbitrary desktop-app control, shell execution, sending email, purchasing, and automatic social posting are not included. See [turn-taking and work cards](docs/TURN_TAKING.md).
+
+## Background tasks and cancellation
+
+Up to three tasks run concurrently; set `AGENT_MAX_CONCURRENT_JOBS` from 1 to 12 to change the bound. Additional jobs queue, with a maximum of twelve queued or running jobs. Notes and timers awaiting confirmation do not occupy running slots and wait until you confirm or cancel them. Speaking and newer turns never cancel work or replace older finished turns.
+
+Every active task has Cancel and Cancel and edit controls. Stop all cancels queued, running and awaiting-confirmation jobs. Cancel and edit invalidates the old task before opening a new request with a new UUID. A selected caption changes the display only until explicitly reviewed and sent. Completed effects are not undone. Misread ignore applies to finished jobs; cancel an active task before ignoring it.
+
+Agent work continues when the browser closes. Restart recovery preserves queued jobs and pending confirmations, and marks in-flight calls failed. Each task uses up to four already-completed earlier jobs as context without waiting for still-running siblings. Keep one uvicorn process; concurrency refers to agent tasks, not server workers.
 
 ## Quick start
 

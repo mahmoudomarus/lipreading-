@@ -31,7 +31,6 @@ export function agentSummary(job) {
   if (job.state === 'queued') return 'Request queued';
   if (job.state === 'thinking') return 'Thinking…';
   if (job.state === 'researching') return 'Researching · checking live sources…';
-  if (job.state === 'interrupted') return 'Interrupted · listening to you';
   if (job.state === 'failed') return job.error;
   if (job.state === 'cancelled') return 'Request cancelled';
   if (job.state === 'dismissed') return 'Misread ignored · continue speaking';
@@ -47,5 +46,33 @@ export function mergeJobs(current, incoming) {
     const old = merged.get(job.id);
     if (!old || job.updated >= old.updated) merged.set(job.id, job);
   }
-  return [...merged.values()].sort((a, b) => a.created - b.created).slice(-30);
+  const ordered = [...merged.values()].sort((a, b) => a.created - b.created);
+  const history = new Set(
+    ordered
+      .filter((job) => !jobCanCancel(job))
+      .slice(-30)
+      .map((job) => job.id),
+  );
+  return ordered.filter((job) => jobCanCancel(job) || history.has(job.id));
+}
+
+export function jobCanCancel(job) {
+  return ['queued', 'thinking', 'researching', 'review'].includes(job.state);
+}
+
+export function backgroundStatus(jobs) {
+  const running = jobs.filter((job) => ['thinking', 'researching'].includes(job.state)).length;
+  const queued = jobs.filter((job) => job.state === 'queued').length;
+  const review = jobs.filter((job) => job.state === 'review').length;
+  const parts = [];
+  if (running) parts.push(running + (running === 1 ? ' task running' : ' tasks running'));
+  if (queued) parts.push(queued + ' queued');
+  if (review) parts.push(review + ' awaiting confirmation');
+  return {
+    active: running + queued + review,
+    running,
+    queued,
+    review,
+    text: parts.join(' · ') || 'Your turn',
+  };
 }
