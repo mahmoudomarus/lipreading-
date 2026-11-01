@@ -49,7 +49,7 @@ Asset URLs are upstream download locations. The checksums record the development
 .venv/bin/python scripts/serve.py
 ```
 
-The service binds to `127.0.0.1:8765`, starts a temporary HTTPS tunnel, and prints a private phone link and QR code. Model loading continues in the background. Wait until the page says it is ready, then allow camera access. Use Safari or Chrome, keep the page visible, face the lens in good light, and speak a short phrase naturally. Press **Finish sentence** before reviewing the words.
+The service binds to `127.0.0.1:8765`, starts a temporary HTTPS tunnel, and prints a private phone link and QR code. Model loading continues in the background. Wait until the page says it is ready, then allow camera access. Use Safari or Chrome, keep the page visible, face the lens in good light, and speak a short phrase naturally. **Live replies** is on by default: finalized predictions go to the agent as you pause. **Finish sentence** is a fallback when a pause is missed. Switch Live replies off for manual review. Notes and timers still wait for action confirmation.
 
 The link contains the app's access token in its fragment. Treat it as a password. It is different from a model-provider API key. Links are stripped from the address bar after connection; the connection is kept in browser session storage. Tunnel origins change when restarted. A static preview alone cannot run inference: the computer service is required.
 
@@ -98,7 +98,7 @@ Agent work can complete while the browser is closed. Timer due times persist and
 
 ## Studio and a separate frontend
 
-Studio records real camera footage and labeled predictions, agent states/results, and optional generated speech for up to 45 seconds. Use **Review request** while recording to edit/send a phrase or confirm a pending action. Review the downloaded clip before sharing it. Settings dialogs, keys, and connection URLs are outside the recorded canvas. Browser recorder and audio behavior still need target-device verification.
+Studio records real camera footage and labeled predictions, agent states/results, and optional generated speech for up to 45 seconds. Live replies also work while recording. Use **Review request** to correct/resend a phrase or confirm a pending action. Review the downloaded clip before sharing it. Settings dialogs, keys, and connection URLs are outside the recorded canvas. Browser recorder and audio behavior still need target-device verification.
 
 The backend serves `phone-app/dist` directly, so separate frontend hosting is optional. To host those static assets elsewhere, set `LIPREAD_SITE_ORIGIN` to its exact origin before launching, then generate a connected link:
 

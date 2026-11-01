@@ -18,7 +18,7 @@ A previous local socket smoke run on one public three-second clip produced its f
 ## Implemented now
 
 - Separate recognition, text provider, job store, and local tool executor.
-- Review editable final predictions before sending requests. Drafts never automatically invoke tools.
+- Live replies submit final visual predictions automatically and label them unverified; manual review remains available. Drafts never reach the agent. Write tools still require confirmation.
 - Validate tool names and arguments, then require confirmation for notes/timers. Persist execution and receipt together. A duplicate request ID with changed words is rejected.
 - Show actual job states and receipts; no fake confidence or simulated live output.
 - Cache detections for identical captured frames within a session. Reset the cache between camera sessions. Do not cache unstable crop boundaries or noncausal encoder state.

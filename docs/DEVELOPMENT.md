@@ -41,7 +41,7 @@ The HTTP harness script assumes it runs from the same checkout/data store as the
 
 ## Manual device checks
 
-Verify camera permission success/denial, front/rear switching, orientation changes, hidden-page capture stop, reconnect, caption replacement, editing a request, pending action cancellation, repeated confirmation, reconnect after a completed job, timer elapsed state, Studio aspect ratio/recording/conversion, and optional speech mixing. Check that recorded media includes provenance labels and no settings/connection data. Record the device/browser and which checks passed.
+Verify camera permission success/denial, front/rear switching, orientation changes, hidden-page capture stop, reconnect, caption replacement, automatic replies, switching Live replies off, duplicate-final deduplication, editing a request, pending action cancellation, repeated confirmation, reconnect after a completed job, timer elapsed state, Studio aspect ratio/recording/conversion, and optional speech mixing. Check that recorded media includes provenance labels and no settings/connection data. Record the device/browser and which checks passed.
 
 ## Release preparation
 

@@ -1,4 +1,5 @@
-import { actionLabel, receiptText } from './agent-core.js';
+import { createConversation } from './conversation.js';
+import { actionLabel, receiptText, mergeJobs } from './agent-core.js';
 
 export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
   const $ = (id) => document.getElementById(id);
@@ -11,12 +12,53 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
     sending = false,
     pending = null,
     serverOffset = 0,
-    signature = '';
+    signature = '',
+    failedTurn = null;
   const composer = $('agent-request'),
     dialog = $('agent-review-dialog');
   function message(text) {
     $('agent-message').textContent = text;
   }
+  function acceptJob(job) {
+    jobs = jobs.filter((j) => j.id !== job.id);
+    jobs.push(job);
+    jobs.sort((a, b) => a.created - b.created);
+    render();
+    onState(job);
+    connected = true;
+    schedule(100);
+  }
+  const conversation = createConversation({
+    async send(body) {
+      message('Sending your phrase…');
+      const response = await requestAPI('/api/agent/jobs', { body });
+      acceptJob(await response.json());
+      message('Thinking… Keep speaking when you’re ready.');
+      if (failedTurn?.id === body.request_id) {
+        failedTurn = null;
+        $('agent-retry-auto').hidden = true;
+      }
+    },
+    onError(error, turn) {
+      message(error.message);
+      if (turn) failedTurn = turn;
+      $('agent-retry-auto').hidden = !failedTurn;
+      $('agent-retry-auto').onclick = () => {
+        if (conversation.retry(failedTurn)) $('agent-retry-auto').hidden = true;
+      };
+    },
+  });
+  $('agent-live-toggle').onchange = () => {
+    conversation.setEnabled($('agent-live-toggle').checked);
+    message(
+      $('agent-live-toggle').checked
+        ? 'Speak and pause. Replies are automatic.'
+        : 'Live replies paused. Review or type a request to send.',
+    );
+    $('agent-live-label').textContent = $('agent-live-toggle').checked
+      ? 'Live replies on'
+      : 'Manual review';
+  };
   function view(assistant = true) {
     document.querySelector('.transcript-panel').classList.toggle('assistant-view', assistant);
     $('assistant-tab').setAttribute('aria-pressed', String(assistant));
@@ -92,15 +134,12 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
         body: { text: text.trim(), source, request_id: pending.id },
       });
       const job = await r.json();
-      jobs = jobs.filter((j) => j.id !== job.id);
-      jobs.push(job);
-      render();
-      onState(job);
+      acceptJob(job);
       composer.value = '';
       source = 'typed';
       dirty = false;
       pending = null;
-      $('agent-source').textContent = 'TYPE, OR REVIEW A CAPTION';
+      $('agent-source').textContent = 'OPTIONAL · TYPE OR CORRECT A MESSAGE';
       message('Request received. You can keep the camera on.');
       dialog.close();
       connected = true;
@@ -157,7 +196,11 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
         node(
           'span',
           'turn-label',
-          job.source === 'reviewed_lips' ? 'REVIEWED CAPTION' : 'TYPED REQUEST',
+          job.source === 'lip_prediction'
+            ? 'LIP PREDICTION · AUTO-SENT'
+            : job.source === 'reviewed_lips'
+              ? 'REVIEWED CAPTION'
+              : 'TYPED REQUEST',
         ),
         node('p', '', job.input),
       );
@@ -208,7 +251,7 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
         const retry = node('button', 'agent-retry', 'Edit and retry');
         retry.onclick = () => {
           composer.value = job.input;
-          source = job.source;
+          source = job.source === 'lip_prediction' ? 'reviewed_lips' : job.source;
           dirty = true;
           pending = null;
           composer.focus();
@@ -257,12 +300,23 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
     try {
       const r = await requestAPI('/api/agent/jobs', { method: 'GET' });
       const data = await r.json();
-      jobs = data.jobs;
+      jobs = mergeJobs(jobs, data.jobs);
       timers = data.timers;
       serverOffset = data.server_time - Date.now() / 1000;
       render();
       renderTimers();
-      if (jobs.length) onState(jobs.at(-1));
+      if (jobs.length) {
+        const latest = jobs.at(-1);
+        onState(latest);
+        if (latest.state === 'completed')
+          message(
+            $('agent-live-toggle').checked
+              ? 'Your turn. Speak and pause for a reply.'
+              : 'Review or type your next request.',
+          );
+        else if (latest.state === 'review') message('Action ready. Confirm it below to continue.');
+        else if (latest.state === 'thinking') message('Thinking…');
+      }
     } catch (e) {
       message(e.message);
     }
@@ -291,7 +345,9 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
     },
     review,
     offerCaption(entry) {
-      if (!dirty && !sending && !dialog.open) fill(entry);
+      if ($('agent-live-toggle').checked) {
+        conversation.offer(entry);
+      } else if (!dirty && !sending && !dialog.open) fill(entry);
     },
   };
 }

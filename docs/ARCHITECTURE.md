@@ -29,7 +29,7 @@ This is **windowed offline inference**, not a causal streaming model. Quality gu
 
 ## Agent pipeline and contracts
 
-`POST /api/agent/jobs` accepts a reviewed/typed request plus a client UUID. It persists before responding; the asynchronous worker continues independently of the browser. The source must be `reviewed_lips` or `typed`; frontend drafts are not automatically submitted. This source label is an application contract, not independent proof that recognition was correct.
+`POST /api/agent/jobs` accepts a final-prediction, reviewed, or typed request plus a client UUID. It persists before responding; the asynchronous worker continues independently of the browser. The source is `lip_prediction` for automatic final camera turns, `reviewed_lips` for manual review, or `typed`. Frontend drafts are never submitted. Automatic turns are serialized and deduplicated per camera session/segment; retries retain their UUID. Live replies can be switched off. This source label is an application contract, not independent proof that recognition was correct.
 
 State transitions:
 
@@ -57,7 +57,7 @@ All `/api/` HTTP routes require `Authorization: Bearer <app-access-token>`. `/ap
 | `GET/POST/DELETE /api/provider/config` | Inspect/configure/disconnect a text provider without returning its key |
 | `POST /api/provider/assist` | Select an existing visual candidate, never an invented replacement |
 | `POST /api/provider/voice` | Optional supported speech adapter |
-| `GET/POST /api/agent/jobs` | Poll recent jobs/timers or submit a reviewed request |
+| `GET/POST /api/agent/jobs` | Poll recent jobs/timers or submit an automatic final prediction, reviewed request, or typed message |
 | `POST /api/agent/jobs/{id}/confirm` | Execute a pending write proposal once |
 | `POST /api/agent/jobs/{id}/cancel` | Cancel a queued job or pending proposal |
 | `POST /api/export` | Convert a bounded browser recording to MP4 |

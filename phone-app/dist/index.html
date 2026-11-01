@@ -202,6 +202,13 @@
               <button id="assistant-tab" aria-pressed="true">Assistant <span>↗</span></button
               ><button id="captions-tab" aria-pressed="false">Transcript</button>
             </div>
+            <div class="live-conversation">
+              <label
+                ><input type="checkbox" id="agent-live-toggle" checked /><span id="agent-live-label"
+                  >Live replies on</span
+                ></label
+              ><span>Final lip predictions go to your model</span>
+            </div>
             <div id="agent-panel" class="agent-panel">
               <div class="agent-feed" id="agent-feed" role="log" aria-live="polite">
                 <div class="agent-welcome" id="agent-welcome">
@@ -209,8 +216,8 @@
                   <p class="eyebrow">A LITTLE LESS NOISE</p>
                   <h3>A thought.<br />A movement.<br />Something done.</h3>
                   <p>
-                    Ask a question, save an idea, or start a timer. Review the words your camera
-                    reads, then send.
+                    Ask a question, save an idea, or start a timer. Speak a phrase and pause. Your
+                    agent replies automatically.
                   </p>
                   <div class="agent-capabilities">
                     <span>Notes ↗</span><span>Timers ↗</span><span>Answers ↗</span>
@@ -220,7 +227,7 @@
               <div class="agent-timers" id="agent-timers" aria-live="off" hidden></div>
               <form id="agent-form" class="agent-composer">
                 <div class="composer-meta">
-                  <span id="agent-source">TYPE, OR REVIEW A CAPTION</span
+                  <span id="agent-source">OPTIONAL · TYPE OR CORRECT A MESSAGE</span
                   ><button type="button" id="agent-use-latest">Use latest caption ↓</button>
                 </div>
                 <label class="sr-only" for="agent-request">Review your request</label
@@ -228,15 +235,17 @@
                   id="agent-request"
                   rows="2"
                   maxlength="1200"
-                  placeholder="What would you like to do?"
+                  placeholder="Or type a message…"
                 ></textarea>
                 <div class="composer-bottom">
-                  <span id="agent-message" role="status">You review. Then it acts.</span
+                  <button type="button" id="agent-retry-auto" hidden>Retry phrase ↗</button
+                  ><span id="agent-message" role="status"
+                    >Speak and pause. Replies are automatic.</span
                   ><button id="agent-send" type="submit">Send request <span>↗</span></button>
                 </div>
               </form>
               <p class="agent-background">
-                Jobs continue on your computer. Keep this page visible for camera input.
+                Live replies use predicted words. Notes and timers wait for confirmation.
               </p>
             </div>
             <div class="transcript-scroll" id="transcript-scroll">

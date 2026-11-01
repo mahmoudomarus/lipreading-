@@ -626,3 +626,39 @@ select:focus-visible {
     line-height: 1.6;
   }
 }
+
+.live-conversation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 24px 0;
+  font-size: 9px;
+  color: #8ca783;
+}
+.live-conversation label {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  color: #c7e7b7;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.live-conversation input {
+  accent-color: #c7f2b2;
+}
+.live-conversation > span {
+  max-width: 140px;
+  text-align: right;
+  line-height: 1.4;
+}
+#agent-retry-auto {
+  font-size: 10px;
+  color: #d7e9bb;
+  background: #2a3d27;
+  border: 1px solid #657d4e;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+}

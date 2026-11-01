@@ -200,7 +200,7 @@ function chooseMode(next) {
   mode = next;
   $('live-mode').setAttribute('aria-pressed', String(mode === 'live'));
   $('phrase-mode').setAttribute('aria-pressed', String(mode === 'phrase'));
-  $('window-note').textContent = mode === 'live' ? 'Drafts as you speak' : 'One phrase · up to 8s';
+  $('window-note').textContent = mode === 'live' ? 'Pause for a reply' : 'One phrase · up to 8s';
   $('commit').hidden = mode === 'phrase';
 }
 $('live-mode').onclick = () => chooseMode('live');
@@ -464,7 +464,7 @@ function receive(event) {
     $('latency').textContent = data.processing_seconds.toFixed(2) + 's phrase processing';
     status(
       running
-        ? 'Phrase refined. Keep speaking, or finish the next sentence manually.'
+        ? 'Phrase captured. The agent will reply automatically when live replies are on.'
         : 'Your phrase is ready.',
     );
     compareReference(entry);
@@ -637,7 +637,7 @@ function cleanup() {
     socket = null;
   }
   $('start').classList.remove('running');
-  $('start-label').textContent = 'Start reading';
+  $('start-label').textContent = 'Start conversation';
   $('start').disabled = false;
   $('flip').disabled = false;
   $('commit').disabled = true;

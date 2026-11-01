@@ -7,7 +7,7 @@ Lipread Lab is a single-user research prototype, not an audited production servi
 - The app token and connected phone link grant access to the computer service. Keep them private. HTTP routes and camera sessions are authenticated.
 - Provider credentials stay in process memory and are not returned by configuration endpoints. A new endpoint requires an explicit key; redirects do not forward credentials.
 - Camera frames stay in recognition memory unless you choose to record. Studio conversion uses temporary files removed after conversion. Downloaded recordings remain until you remove them.
-- Reviewed requests, plans/replies, notes, timers and execution receipts are stored in `.runtime/agent.sqlite3`. Recent completed context, including receipts, may be sent to your chosen text provider.
+- Final visual predictions sent with Live replies, reviewed/typed requests, plans/replies, notes, timers and execution receipts are stored in `.runtime/agent.sqlite3`. Recent completed context, including receipts, may be sent to your chosen text provider.
 - The HTTPS tunnel relays phone traffic. Provider and tunnel policies apply. Same-computer model endpoints can use loopback HTTP; remote endpoints require HTTPS.
 - Logs, private URLs, databases, environment files, user footage and weights are ignored and excluded from source bundles. Review every staged file before publication.
 

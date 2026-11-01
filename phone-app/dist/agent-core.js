@@ -27,3 +27,13 @@ export function agentSummary(job) {
     return 'Awaiting confirmation · ' + job.plan.actions.map(actionLabel).join(' / ');
   return job.result?.length ? job.result.map(receiptText).join('\n') : job.plan?.answer || '';
 }
+
+// A slow poll must not erase a just-submitted turn or roll a receipt back to thinking.
+export function mergeJobs(current, incoming) {
+  const merged = new Map(current.map((job) => [job.id, job]));
+  for (const job of incoming) {
+    const old = merged.get(job.id);
+    if (!old || job.updated >= old.updated) merged.set(job.id, job);
+  }
+  return [...merged.values()].sort((a, b) => a.created - b.created).slice(-30);
+}

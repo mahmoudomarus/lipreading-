@@ -204,6 +204,23 @@ class AgentTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             self.store.confirm(job["id"])
 
+    async def test_automatic_final_prediction_answers_without_review(self):
+        job = self.submit("Hello there", source="lip_prediction")
+        await self.store.run_once(self.fake({"answer": "Hello!", "actions": []}))
+        result = self.store.get(job["id"])
+        self.assertEqual(result["source"], "lip_prediction")
+        self.assertEqual(result["state"], "completed")
+        self.assertEqual(result["plan"]["answer"], "Hello!")
+
+    async def test_automatic_final_prediction_still_cannot_execute_a_write(self):
+        job = self.submit("Save this note", source="lip_prediction")
+        await self.store.run_once(self.fake(plan()))
+        self.assertEqual(self.store.get(job["id"])["state"], "review")
+        with self.store.db() as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM notes").fetchone()[0], 0)
+        self.store.confirm(job["id"])
+        self.assertEqual(self.store.get(job["id"])["state"], "completed")
+
     def test_drafts_cannot_enter_agent_queue(self):
         with self.assertRaises(ValueError):
             self.submit(source="draft")

@@ -2,7 +2,7 @@
 
 **What if a silent sentence could become a useful action?**
 
-Lipread Lab is an experimental phone-camera interface for a small agent. Mouth a sentence, review the predicted words, then ask a question, calculate something, save a note, or start a timer. The microphone stays off.
+Lipread Lab is an experimental phone-camera interface for a small agent. Mouth a sentence and pause: finalized lip predictions go straight to the agent for a reply. Ask a question, calculate something, save a note, or start a timer. The microphone stays off.
 
 > **Early research prototype.** This is an idea to explore and improve together. Unrestricted English lip reading is not solved here. The current recognizer processes growing video windows with an offline model; it is not a fully streaming recognizer. Predictions can be wrong even in good conditions.
 
@@ -11,7 +11,7 @@ Lipread Lab is an experimental phone-camera interface for a small agent. Mouth a
 ## What works today
 
 - Phone camera → authenticated video stream → visual-only English captions on your computer.
-- Editable final predictions before they reach the agent. Provisional drafts never automatically trigger tools.
+- Live replies send finalized predictions automatically. Switch off Live replies for editable manual review. Provisional drafts never reach the agent.
 - Questions and five local tools: notes, timers, listing notes/timers, and arithmetic.
 - Action previews for notes and timers, persisted execution receipts, and duplicate-request protection.
 - Replaceable hosted/local text models through Responses or Chat-compatible APIs.
@@ -34,7 +34,7 @@ python3.11 -m venv .venv
 .venv/bin/python scripts/serve.py
 ```
 
-Open the printed private HTTPS link or scan its QR code on your phone. Allow camera access and press **Start reading**. Speak a short phrase, press **Finish sentence**, review/edit the prediction, and press **Send request**. Notes and timers need a second confirmation.
+Open the printed private HTTPS link or scan its QR code on your phone. Allow camera access and press **Start conversation**. Speak a short phrase and pause; the agent replies automatically. **Finish sentence** is available if a pause is missed. Switch off **Live replies** to review/edit before sending instead. Notes and timers still require confirmation.
 
 Recognition requires no API key. To use the agent, connect your preferred endpoint in **Settings → Model connection**. Your computer must stay awake. `Ctrl+C` stops the foreground service. [Detailed installation, model configuration, and background operation →](docs/SETUP.md)
 
@@ -43,7 +43,7 @@ Recognition requires no API key. To use the agent, connect your preferred endpoi
 ```mermaid
 flowchart LR
     Camera[Phone camera / no microphone] --> Reader[Visual recognizer on computer]
-    Reader --> Review[Editable prediction / user review]
+    Reader --> Review[Final prediction / optional manual review]
     Review --> Model[Replaceable text model]
     Model --> Plan[Validated answer or action plan]
     Plan --> Confirm[Confirmation for writes]
@@ -51,7 +51,7 @@ flowchart LR
     Tools --> UI[Reply and Studio overlay]
 ```
 
-Only reviewed text and recent completed agent context go to the selected text provider. Camera frames stay in the computer's recognition pipeline. Optional speech uses a separate adapter. [Module map, API boundaries, and extension points →](docs/ARCHITECTURE.md)
+Final lip predictions, manually reviewed or typed text, and recent completed agent context go to the selected text provider. Camera frames stay in the computer's recognition pipeline. Optional speech uses a separate adapter. [Module map, API boundaries, and extension points →](docs/ARCHITECTURE.md)
 
 ## Accuracy and latency: the open problem
 
@@ -76,6 +76,6 @@ Tests cover frame/authentication boundaries, caption handling, provider errors, 
 
 ## Privacy and license
 
-API credentials stay in server memory. Reviewed requests, replies, notes, timers, and tool receipts are saved locally in `.runtime/agent.sqlite3`. Video is kept in RAM unless you choose to record; conversion uses temporary files. The tunnel relays traffic, and your selected provider's policies apply to text you send. Keep private links, recordings, and `.runtime/` out of Git.
+API credentials stay in server memory. Automatically submitted or reviewed requests, replies, notes, timers, and tool receipts are saved locally in `.runtime/agent.sqlite3`. Video is kept in RAM unless you choose to record; conversion uses temporary files. The tunnel relays traffic, and your selected provider's policies apply to text you send. Keep private links, recordings, and `.runtime/` out of Git.
 
 This is a single-user prototype, not an audited production service. [Security and data handling](SECURITY.md) · [MIT license for original code](LICENSE) · [Third-party code and model terms](THIRD_PARTY.md)
