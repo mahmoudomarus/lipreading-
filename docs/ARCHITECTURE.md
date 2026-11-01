@@ -7,6 +7,8 @@ agent.py                  SQLite jobs, validated plans, local tools and receipts
 provider.py               Generic Responses / Chat-compatible text adapter
 engine.py                 Visual recognition, preprocessing and framing feedback
 recognition_guard.py      Uncalibrated abstention/repetition checks
+turn_taking.py            Lip-shape activity and utterance assembly
+web_results.py            Web citation and public-link validation
 server.py                 Authenticated HTTP + camera WebSocket; static assets
 openai_bridge.py          Optional legacy speech/candidate adapter
 video_export.py           Bounded FFmpeg conversion with temporary-file cleanup
@@ -47,7 +49,7 @@ A server restart marks `thinking` failed. The same UUID with the same input retu
 
 `provider.py` sends the request and a bounded recent completed conversation to the model. It returns a structured **proposal**, not permission to execute arbitrary code. `validate_plan` checks the tool allowlist, argument shapes/ranges, and action count. Writes wait for confirmation. SQLite commits each action and its receipt in the same transaction; repeated confirmation returns the same completed result. UI and Studio distinguish proposals from actual execution receipts.
 
-The included tools are local and narrow. `calculate` evaluates a restricted arithmetic AST, never `eval`. There are no external write actions. Timer state consists of persisted due times; notification delivery is not implemented.
+The original tools are local and narrow; research, page cards and inert Markdown drafts extend the conversation. See [turn-taking and work cards](TURN_TAKING.md). `calculate` evaluates a restricted arithmetic AST, never `eval`. There are no external write actions. Timer state consists of persisted due times; notification delivery is not implemented.
 
 ## HTTP surface
 
@@ -66,6 +68,8 @@ All `/api/` HTTP routes require `Authorization: Bearer <app-access-token>`. `/ap
 | `POST /api/export` | Convert a bounded browser recording to MP4 |
 
 Automatic jobs may be marked `dismissed` using `POST /api/agent/jobs/{id}/dismiss`. They remain in the audit record but are excluded from later model context; already executed tools are not undone. A reply arriving after dismissal cannot restore the job.
+
+Visual speech starts can call the same authenticated interruption operation as `POST /api/agent/interrupt`. Interrupted work never becomes completed, and the worker cancels its current HTTP await so later requests are not stuck behind it.
 
 `/api/openai/*` routes remain for compatibility with the earlier private prototype. New UI/integrations should use the generic provider routes. API documentation is intentionally not served publicly; this prototype has no stable versioned external API promise yet.
 

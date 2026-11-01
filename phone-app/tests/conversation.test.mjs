@@ -124,3 +124,12 @@ test('an unsupported final caption is held for correction and never auto-sent', 
   assert.equal(sent.length, 0);
   assert.equal(held.length, 1);
 });
+
+test('visual-turn scope travels with the request so a stale turn can be rejected', async () => {
+  const sent = [];
+  const flow = createConversation({ send: async (body) => sent.push(body), makeId: () => 'id' });
+  flow.offer({ ...result('a'), session_id: 'camera-session', turn_id: 4 });
+  await flow.settled();
+  assert.equal(sent[0].session_id, 'camera-session');
+  assert.equal(sent[0].turn_id, 4);
+});

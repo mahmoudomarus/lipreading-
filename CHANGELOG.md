@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Add local lip-shape turn detection, pause-based utterance assembly, interruption of in-flight requests, stale-turn rejection, cited web research, sandboxed page cards, and downloadable Markdown drafts. See `docs/TURN_TAKING.md` for implemented behavior and limits.
+
 Prevent empty visual drafts from triggering fluent beam-decoder guesses; hold repetitive, unsupported and recent duplicate long readings. Add silence abstention and Misread dismissal with context isolation. Pace camera delivery to 25 FPS without reducing sensor cadence to 15 FPS. Upgrade the default conversation model to GPT-6.1 Sol with low reasoning effort; text provider remains replaceable.
 
 

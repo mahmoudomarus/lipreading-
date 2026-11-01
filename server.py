@@ -25,6 +25,7 @@ from video_export import export_mp4, ExportError
 from provider import TextProvider, ProviderError
 from agent import AgentStore
 from recognition_guard import RecognitionGuard, review_reason
+from turn_taking import MouthMonitor, Utterances
 
 ROOT = Path(__file__).resolve().parent
 RUNTIME = ROOT / ".runtime"
@@ -37,7 +38,14 @@ if not TOKEN_FILE.exists():
 TOKEN = TOKEN_FILE.read_text().strip()
 executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lipread")
 quality_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="framing")
-state = {"status": "loading", "detail": "Warming up recognition…", "reader": None, "monitor": None}
+mouth_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lip-activity")
+state = {
+    "mouth": None,
+    "status": "loading",
+    "detail": "Warming up recognition…",
+    "reader": None,
+    "monitor": None,
+}
 inference_lock = asyncio.Lock()
 session_lock = asyncio.Lock()
 log = logging.getLogger("lipread")
@@ -88,7 +96,15 @@ async def load_model():
             loop.run_in_executor(executor, LipReader),
             loop.run_in_executor(quality_executor, QualityMonitor),
         )
-        state.update(reader=reader, monitor=monitor, status="ready", detail="Ready to read")
+        mouth_path = ROOT / "models/face_landmarker.task"
+        mouth = (
+            await loop.run_in_executor(mouth_executor, lambda: MouthMonitor(mouth_path))
+            if mouth_path.exists()
+            else None
+        )
+        state.update(
+            reader=reader, monitor=monitor, mouth=mouth, status="ready", detail="Ready to read"
+        )
         log.warning("Lip-reading ready. Encoder: %s. Audio disabled.", reader.device)
     except Exception:
         log.exception("Model loading failed")
@@ -108,6 +124,7 @@ async def lifespan(app):
         await worker
     executor.shutdown(wait=False, cancel_futures=True)
     quality_executor.shutdown(wait=False, cancel_futures=True)
+    mouth_executor.shutdown(wait=False, cancel_futures=True)
 
 
 app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
@@ -155,6 +172,7 @@ async def status(authorization: str = Header(default="")):
         "active_session": session_lock.locked(),
         "version": 4,
         "agent_configured": provider.enabled,
+        "visual_turns": state.get("mouth") is not None,
     }
 
 
@@ -192,7 +210,7 @@ async def provider_config(request: Request):
 @app.post("/api/provider/config")
 async def provider_connect(request: Request):
     authorize_request(request)
-    if any(job["state"] in {"queued", "thinking"} for job in agent_store.list()):
+    if any(job["state"] in {"queued", "thinking", "researching"} for job in agent_store.list()):
         raise HTTPException(409, "Wait for queued requests before changing the model connection.")
     body = await small_json(request, 2000)
     try:
@@ -252,10 +270,21 @@ async def agent_submit(request: Request):
     body = await small_json(request, 3000)
     if not provider.enabled:
         raise HTTPException(400, "Connect a model in Settings first.")
+    session = body.get("session_id")
+    if session is not None:
+        current = state.get("turn_sessions", {}).get(session)
+        if not current or current["turn"] != body.get("turn_id"):
+            raise HTTPException(409, "A newer spoken turn superseded that request.")
     try:
         return agent_store.submit(body.get("text"), body.get("source"), body.get("request_id"))
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None
+
+
+@app.post("/api/agent/interrupt")
+async def interrupt_agent(request: Request):
+    authorize_request(request)
+    return {"interrupted": agent_store.interrupt()}
 
 
 @app.post("/api/agent/jobs/{job_id}/{operation}")
@@ -346,8 +375,8 @@ async def export_recording(request: Request):
 @app.websocket("/api/stream")
 async def stream(ws: WebSocket):
     origin = ws.headers.get("origin", "")
-    own_origins = {f"https://{ws.headers.get('host')}", f"http://{ws.headers.get('host')}"}
-    if origin not in own_origins | {SITE_ORIGIN}:
+    own = {f"https://{ws.headers.get('host')}", f"http://{ws.headers.get('host')}"}
+    if origin not in own | {SITE_ORIGIN}:
         await ws.close(code=1008)
         return
     await ws.accept()
@@ -364,29 +393,44 @@ async def stream(ws: WebSocket):
         with contextlib.suppress(Exception):
             await ws.close(code=1008)
         return
-    if state["status"] != "ready":
-        await ws.send_json({"type": "error", "message": state["detail"]})
-        await ws.close(code=1013)
-        return
-    if session_lock.locked():
+    if state["status"] != "ready" or session_lock.locked():
         await ws.send_json(
-            {"type": "error", "message": "Another camera is connected. Stop that session first."}
+            {
+                "type": "error",
+                "message": state["detail"]
+                if state["status"] != "ready"
+                else "Another camera is connected. Stop that session first.",
+            }
         )
         await ws.close(code=1013)
         return
-
     async with session_lock:
-        # All inference is serialized, so cache entries cannot cross speakers.
-        await asyncio.get_running_loop().run_in_executor(executor, state["reader"].begin_session)
-        buffer = StreamBuffer()
-        guard = RecognitionGuard()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(executor, state["reader"].begin_session)
+        mouth = state.get("mouth")
+        visual = mouth is not None
+        if visual:
+            await loop.run_in_executor(mouth_executor, mouth.reset)
+        session_id = secrets.token_urlsafe(12)
+        sessions = state.setdefault("turn_sessions", {})
+        sessions[session_id] = {"turn": 0, "at": time.monotonic()}
+        for old in list(sessions)[:-8]:
+            sessions.pop(old, None)
+        conversation = hello.get("conversation") is True
         mode = hello.get("mode", "live")
         mode = mode if mode in {"live", "phrase"} else "live"
-        task = quality_task = None
-        pending_cutoff = None
-        last_timestamp = -1.0
-        last_quality = -1.0
+        buffer = StreamBuffer()
+        guard = RecognitionGuard()
+        utterances = Utterances()
+        closing = False
+        draining = False
+        cuts = deque()
+        task = quality_task = mouth_task = None
+        last_timestamp = last_quality = last_mouth = -1.0
         last_analysis = None
+        active_turn = 0
+        speech_open = False
+        mouth_speaking = False
         send_lock = asyncio.Lock()
         rate_start, rate_count = time.monotonic(), 0
 
@@ -405,14 +449,78 @@ async def stream(ws: WebSocket):
 
         async def check_quality(frame):
             try:
-                feedback = await native(quality_executor, state["monitor"].check, frame)
-                await send(feedback)
+                await send(await native(quality_executor, state["monitor"].check, frame))
             except Exception:
-                # Framing advice must not terminate a recognition session.
                 log.debug("Framing feedback failed", exc_info=True)
 
-        async def recognize(samples, segment, force_final=False):
-            nonlocal last_analysis
+        async def finish_turn(turn_id, endpoint):
+            turn = utterances.turns.get(turn_id)
+            if turn and turn["sent"]:
+                return
+            result = utterances.finish(turn_id, endpoint)
+            if result:
+                result.update(guard.assess(result, endpoint))
+                if turn_id < active_turn:
+                    result.update(
+                        auto_send=False,
+                        needs_review=True,
+                        review_reason="A newer phrase superseded this reading.",
+                    )
+                if len(result["text"]) > 1200:
+                    result.update(
+                        auto_send=False,
+                        needs_review=True,
+                        review_reason="That turn was too long. Try a shorter request.",
+                    )
+                await send({**result, "session_id": session_id})
+            else:
+                await send(
+                    {
+                        "type": "abstained",
+                        "silent": True,
+                        "capture_end": endpoint,
+                        "turn_id": turn_id,
+                    }
+                )
+
+        def cut(timestamp, turn_id):
+            if timestamp < 0:
+                return
+            if not cuts or timestamp > cuts[-1][0] + 0.04:
+                if len(cuts) < 8:
+                    cuts.append((timestamp, turn_id))
+            schedule()
+
+        async def check_mouth(frame, timestamp):
+            nonlocal active_turn, speech_open, mouth_speaking
+            try:
+                activity = await native(mouth_executor, mouth.check, frame, timestamp)
+                if activity["event"] == "started":
+                    start = (
+                        activity["speech_start"]
+                        if activity.get("speech_start") is not None
+                        else timestamp
+                    )
+                    if not speech_open and not cuts:
+                        while buffer.frames and buffer.frames[0][0] < start - 0.35:
+                            buffer.frames.popleft()
+                    active_turn += 1
+                    speech_open = True
+                    mouth_speaking = True
+                    sessions[session_id]["turn"] = active_turn
+                    utterances.start(active_turn, start)
+                    activity["interrupted"] = agent_store.interrupt() if conversation else []
+                elif activity["event"] == "stopped":
+                    mouth_speaking = False
+                    if mode == "live":
+                        cut(timestamp, active_turn)
+                await send({**activity, "turn_id": active_turn, "session_id": session_id})
+                schedule()
+            except Exception:
+                log.warning("Lip activity feedback failed", exc_info=True)
+
+        async def recognize(samples, segment, force_final=False, turn_id=0, ending=False):
+            nonlocal last_analysis, speech_open
             endpoint = samples[-1][0]
             async with inference_lock:
                 try:
@@ -437,43 +545,62 @@ async def stream(ws: WebSocket):
                                 "sequence": segment,
                                 "mode": mode,
                                 "capture_end": endpoint,
+                                "turn_id": turn_id,
                             }
                         )
-                    # CTC blank tails are a heuristic pause detector, not guaranteed
-                    # speech boundaries. A manual sentence control is also available.
                     paused = (
-                        mode == "live"
+                        not visual
+                        and mode == "live"
                         and metadata["duration"] >= 2.5
                         and metadata["trailing_blank_seconds"] >= 0.9
                         and len(metadata["text"].split()) >= 2
                     )
-                    finalize = force_final or paused or metadata["duration"] >= 8.0
-                    if finalize:
+                    if force_final or paused or metadata["duration"] >= 8:
                         await send({"type": "processing", "sequence": segment, "phase": "refining"})
                         result = await native(
                             executor, state["reader"].refine, analysis, mode == "phrase"
                         )
-                        result.update(guard.assess(result, endpoint))
+                        if visual:
+                            utterances.add(turn_id, segment, result)
+                        else:
+                            result.update(guard.assess(result, endpoint))
                         await send(
-                            {**result, "sequence": segment, "mode": mode, "capture_end": endpoint}
+                            {
+                                **result,
+                                "sequence": segment,
+                                "mode": mode,
+                                "capture_end": endpoint,
+                                "turn_id": turn_id,
+                                "visual_turns": visual,
+                                "awaiting_pause": visual and not ending,
+                            }
                         )
                         buffer.finalize(endpoint)
                         last_analysis = None
+                        if visual and ending:
+                            await finish_turn(turn_id, endpoint)
+                            if turn_id == active_turn:
+                                speech_open = mouth_speaking
                 except CaptureError as exc:
                     if not isinstance(exc, NoSpeech):
                         await send({"type": "guidance", "message": str(exc), "sequence": segment})
                     if force_final:
                         buffer.finalize(endpoint)
                         last_analysis = None
-                        await send(
-                            {
-                                "type": "abstained",
-                                "silent": isinstance(exc, NoSpeech),
-                                "message": str(exc),
-                                "sequence": segment,
-                                "capture_end": endpoint,
-                            }
-                        )
+                        if visual and ending:
+                            await finish_turn(turn_id, endpoint)
+                            if turn_id == active_turn:
+                                speech_open = mouth_speaking
+                        else:
+                            await send(
+                                {
+                                    "type": "abstained",
+                                    "silent": isinstance(exc, NoSpeech),
+                                    "message": str(exc),
+                                    "sequence": segment,
+                                    "capture_end": endpoint,
+                                }
+                            )
                 except Exception:
                     log.exception("Recognition failed")
                     await send(
@@ -489,35 +616,67 @@ async def stream(ws: WebSocket):
                 finally:
                     await send({"type": "ready"})
 
+        async def finish_short(turn_id, endpoint):
+            nonlocal speech_open
+            if visual:
+                await finish_turn(turn_id, endpoint)
+            if turn_id == active_turn:
+                speech_open = mouth_speaking
+
+        def launch(coro):
+            job = asyncio.create_task(coro)
+            job.add_done_callback(lambda done: schedule())
+            return job
+
         def schedule():
-            nonlocal task, pending_cutoff
+            nonlocal task
+            if closing or draining:
+                return
             if task and not task.done():
                 return
             if task:
                 task.result()
                 task = None
-            if pending_cutoff is not None and pending_cutoff <= buffer.consumed:
-                pending_cutoff = None
-            final = pending_cutoff is not None or buffer.duration() >= 8.0
+            while cuts and cuts[0][0] <= buffer.consumed:
+                endpoint, tid = cuts.popleft()
+                task = launch(finish_short(tid, endpoint))
+                return
+            if visual and not speech_open and not cuts:
+                return
+            final = bool(cuts) or buffer.duration() >= 8.0
             if not final and not buffer.due():
                 return
-            samples = buffer.snapshot(pending_cutoff)
+            cutoff, tid = cuts[0] if cuts else (None, active_turn)
+            samples = buffer.snapshot(cutoff)
             if not samples:
-                pending_cutoff = None
+                if cuts:
+                    cuts.popleft()
+                    task = launch(finish_short(tid, cutoff))
                 return
-            # Subsecond leftovers do not become duplicate or invented captions.
+            ending = bool(cuts)
+            if ending:
+                cuts.popleft()
             if final and samples[-1][0] - samples[0][0] < 0.7:
                 buffer.finalize(samples[-1][0])
-                pending_cutoff = None
+                if ending:
+                    task = launch(finish_short(tid, samples[-1][0]))
                 return
             buffer.last_draft = samples[-1][0]
-            task = asyncio.create_task(recognize(samples, buffer.segment, force_final=final))
-            pending_cutoff = None
+            task = launch(recognize(samples, buffer.segment, final, tid, ending))
 
-        await send({"type": "connected", "mode": mode, "draft_after_seconds": 1.35, "version": 2})
+        await send(
+            {
+                "type": "connected",
+                "mode": mode,
+                "draft_after_seconds": 1.35,
+                "version": 2,
+                "visual_turns": visual,
+                "session_id": session_id,
+            }
+        )
         try:
             while True:
-                message = await asyncio.wait_for(ws.receive(), timeout=25)
+                message = await asyncio.wait_for(ws.receive(), 25)
                 if message["type"] == "websocket.disconnect":
                     break
                 if message.get("bytes") is not None:
@@ -544,6 +703,13 @@ async def stream(ws: WebSocket):
                     ):
                         last_quality = timestamp
                         quality_task = asyncio.create_task(check_quality(frame))
+                    if (
+                        visual
+                        and timestamp - last_mouth >= 0.12
+                        and (mouth_task is None or mouth_task.done())
+                    ):
+                        last_mouth = timestamp
+                        mouth_task = asyncio.create_task(check_mouth(frame, timestamp))
                     schedule()
                     if mode == "phrase" and timestamp >= 7.8:
                         await send({"type": "phrase_limit"})
@@ -553,17 +719,39 @@ async def stream(ws: WebSocket):
                     control = json.loads(message["text"])
                     if control.get("type") == "ping":
                         await send({"type": "pong"})
-                    elif control.get("type") == "commit":
-                        pending_cutoff = last_timestamp
-                        schedule()
-                    elif control.get("type") == "finish":
-                        if task:
-                            await task
-                        remaining = buffer.snapshot()
-                        if remaining and buffer.duration() >= 0.7:
-                            await recognize(remaining, buffer.segment, force_final=True)
-                        await send({"type": "finished"})
-                        break
+                    elif control.get("type") == "conversation":
+                        conversation = control.get("enabled") is True
+                    elif control.get("type") in {"commit", "finish"}:
+                        if visual and not active_turn:
+                            active_turn += 1
+                            sessions[session_id]["turn"] = active_turn
+                            utterances.start(
+                                active_turn, buffer.frames[0][0] if buffer.frames else 0
+                            )
+                        if control["type"] == "commit":
+                            cut(last_timestamp, active_turn)
+                        else:
+                            draining = True
+                            if mouth_task:
+                                await mouth_task
+                            if task:
+                                await task
+                            while cuts:
+                                cutoff, tid = cuts.popleft()
+                                piece = buffer.snapshot(cutoff)
+                                if piece and piece[-1][0] - piece[0][0] >= 0.7:
+                                    await recognize(piece, buffer.segment, True, tid, True)
+                                else:
+                                    await finish_turn(tid, cutoff)
+                            remaining = buffer.snapshot()
+                            if remaining and buffer.duration() >= 0.7:
+                                await recognize(
+                                    remaining, buffer.segment, True, active_turn, visual
+                                )
+                            elif visual:
+                                await finish_turn(active_turn, last_timestamp)
+                            await send({"type": "finished"})
+                            break
         except (WebSocketDisconnect, asyncio.TimeoutError):
             pass
         except (ValueError, TypeError, KeyError):
@@ -572,7 +760,8 @@ async def stream(ws: WebSocket):
                     {"type": "error", "message": "Camera message was invalid. Restart the camera."}
                 )
         finally:
-            for job in (task, quality_task):
+            closing = True
+            for job in (task, quality_task, mouth_task):
                 if job and not job.done():
                     job.cancel()
                     with contextlib.suppress(asyncio.CancelledError, Exception):

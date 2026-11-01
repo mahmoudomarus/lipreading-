@@ -21,7 +21,12 @@ export function createConversation({
         turn.state = 'sending';
         onQueue?.(queue.length + 1);
         try {
-          await send({ text: turn.text, source: 'lip_prediction', request_id: turn.id });
+          await send({
+            text: turn.text,
+            source: 'lip_prediction',
+            request_id: turn.id,
+            ...turn.scope,
+          });
           turn.state = 'sent';
         } catch (error) {
           turn.state = 'failed';
@@ -52,7 +57,11 @@ export function createConversation({
         onError?.(new Error('Conversation is busy. Pause and try that phrase again.'));
         return false;
       }
-      const turn = { key: entry.id, id: makeId(), text: entry.text.trim(), state: 'queued' };
+      const scope =
+        entry.session_id && Number.isInteger(entry.turn_id)
+          ? { session_id: entry.session_id, turn_id: entry.turn_id }
+          : {};
+      const turn = { key: entry.id, id: makeId(), text: entry.text.trim(), state: 'queued', scope };
       known.set(entry.id, turn);
       // Keep only a bounded deduplication window; the server also deduplicates request UUIDs.
       if (known.size > 500) known.delete(known.keys().next().value);
@@ -66,6 +75,10 @@ export function createConversation({
       queue.push(turn); // Same UUID: a lost acknowledgement cannot create a second job.
       pump();
       return true;
+    },
+    interrupt() {
+      for (const turn of queue) turn.state = 'cancelled';
+      queue.length = 0;
     },
     setEnabled(value) {
       enabled = Boolean(value);

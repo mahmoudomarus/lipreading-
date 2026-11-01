@@ -12,13 +12,14 @@ Lipread Lab is an experimental phone-camera interface for a small agent. Mouth a
 
 - Phone camera → authenticated video stream → visual-only English captions on your computer.
 - Live replies send eligible finalized predictions automatically. Silence, unsupported/repetitive decodes, and recent repeated long readings are held back for correction. Use **Misread · ignore** to remove a mistaken turn from future context. Switch off Live replies for editable manual review. Provisional drafts never reach the agent.
-- Questions and five local tools: notes, timers, listing notes/timers, and arithmetic.
+- Visual pause detection and interruption: renewed lip movement can cancel a pending answer.
+- Questions, notes, timers, arithmetic, cited web research, page previews, and downloadable Markdown drafts.
 - Action previews for notes and timers, persisted execution receipts, and duplicate-request protection.
 - Replaceable hosted/local text models through Responses or Chat-compatible APIs.
 - A recording studio for actual camera footage, labeled predictions, agent replies, and optional generated speech.
 - Background computer jobs. Phone camera capture requires a visible page; locked-phone capture and push alarms are not supported.
 
-No web browsing, arbitrary app control, shell execution, email, purchasing, or automatic social posting is included.
+Web research and sandboxed page-preview cards are included. Arbitrary desktop-app control, shell execution, sending email, purchasing, and automatic social posting are not included. See [turn-taking and work cards](docs/TURN_TAKING.md).
 
 ## Quick start
 

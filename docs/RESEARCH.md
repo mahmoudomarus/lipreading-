@@ -47,7 +47,7 @@ The next model experiment should compare an actually streaming, visual-only chec
 
 ## Deliberate limits
 
-The agent can answer from model knowledge, calculate, save local notes, and start local timers. It cannot browse, operate arbitrary apps, send email, post, purchase, or run shell commands. Timers use persisted due times and update on reconnect; there is no push notification or background alarm delivery while the phone is closed. Computer sleep suspends work. Provider requests have bounded timeouts and fail visibly. Jobs interrupted by server restart are marked failed instead of silently repeated.
+The agent can answer from model knowledge, calculate, save local notes, and start local timers. It can now run bounded cited web research and prepare page-preview/draft cards; it cannot operate arbitrary desktop apps, send email, post, purchase, or run shell commands. Timers use persisted due times and update on reconnect; there is no push notification or background alarm delivery while the phone is closed. Computer sleep suspends work. Provider requests have bounded timeouts and fail visibly. Jobs interrupted by server restart are marked failed instead of silently repeated.
 
 ## Repeated filler follow-up
 

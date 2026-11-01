@@ -34,4 +34,4 @@ Use [the research methodology](RESEARCH.md), the [example manifest](examples/hel
 
 ## Outside the current prototype
 
-Arbitrary app operation, external write tools, native/wearable capture, multi-user hosting, background phone alarms and durable provider secret storage need their own designs. The browser cannot promise camera capture while a phone is locked. Preserve honest capture/prediction/action states in any demo.
+The current lip-activity turn detector needs held-out calibration for false interruptions and missed pauses. Arbitrary app operation, external write tools, native/wearable capture, multi-user hosting, background phone alarms and durable provider secret storage need their own designs. The browser cannot promise camera capture while a phone is locked. Preserve honest capture/prediction/action states in any demo.

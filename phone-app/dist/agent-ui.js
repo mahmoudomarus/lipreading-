@@ -1,8 +1,20 @@
+import { createWorkCards } from './work-cards.js';
 import { createConversation } from './conversation.js';
 import { actionLabel, receiptText, mergeJobs } from './agent-core.js';
 
-export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
+export function createAgentUI({
+  requestAPI,
+  getLatest,
+  onState,
+  onSettings,
+  onInterrupt = () => {},
+  onLiveMode = () => {},
+  onPhase = () => {},
+}) {
   const $ = (id) => document.getElementById(id);
+  const workCards = createWorkCards();
+  let userSpeaking = false,
+    latestVisualTurn = 0;
   let jobs = [],
     timers = [],
     pollTimer,
@@ -20,9 +32,7 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
     $('agent-message').textContent = text;
   }
   function acceptJob(job) {
-    jobs = jobs.filter((j) => j.id !== job.id);
-    jobs.push(job);
-    jobs.sort((a, b) => a.created - b.created);
+    jobs = mergeJobs(jobs, [job]);
     render();
     onState(job);
     connected = true;
@@ -47,7 +57,9 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
       $('agent-held').hidden = true;
       message('Sending your phrase…');
       const response = await requestAPI('/api/agent/jobs', { body });
-      acceptJob(await response.json());
+      const job = await response.json();
+      if (body.turn_id && body.turn_id < latestVisualTurn) return;
+      acceptJob(job);
       message('Thinking… Keep speaking when you’re ready.');
       if (failedTurn?.id === body.request_id) {
         failedTurn = null;
@@ -55,6 +67,10 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
       }
     },
     onError(error, turn) {
+      if (/superseded/.test(error.message)) {
+        message('Listening to your new request.');
+        return;
+      }
       message(error.message);
       if (turn) failedTurn = turn;
       $('agent-retry-auto').hidden = !failedTurn;
@@ -65,6 +81,7 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
   });
   $('agent-live-toggle').onchange = () => {
     conversation.setEnabled($('agent-live-toggle').checked);
+    onLiveMode($('agent-live-toggle').checked);
     message(
       $('agent-live-toggle').checked
         ? 'Speak and pause. Replies are automatic.'
@@ -74,6 +91,51 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
       ? 'Live replies on'
       : 'Manual review';
   };
+  function phase(value, text) {
+    $('turn-state').textContent = text;
+    $('turn-state').dataset.phase = value;
+    onPhase(value, text);
+  }
+  function markInterrupted(ids) {
+    conversation.interrupt();
+    const set = new Set(ids);
+    jobs = jobs.map((job) =>
+      set.has(job.id)
+        ? { ...job, state: 'interrupted', updated: Date.now() / 1000 + serverOffset }
+        : job,
+    );
+    render();
+    onInterrupt();
+    if (jobs.length) onState(jobs.at(-1));
+  }
+  async function interrupt() {
+    onInterrupt();
+    conversation.interrupt();
+    phase('listening', 'Listening to you');
+    try {
+      const response = await requestAPI('/api/agent/interrupt');
+      markInterrupted((await response.json()).interrupted);
+      message('Interrupted. Ask your next question.');
+      schedule(50);
+    } catch (error) {
+      message(error.message);
+    }
+  }
+  $('agent-interrupt').onclick = interrupt;
+  function speech(activity) {
+    if (!$('agent-live-toggle').checked) return;
+    userSpeaking = activity.speaking;
+    if (activity.event === 'started') {
+      latestVisualTurn = activity.turn_id;
+      markInterrupted(activity.interrupted || []);
+      phase('listening', 'Listening to you');
+      message('Keep speaking. Pause when you’re done.');
+    } else if (activity.event === 'stopped') {
+      phase('finishing', 'You paused · finishing the phrase');
+    } else if (!activity.available) {
+      phase('framing', 'Bring your lips into view');
+    }
+  }
   function view(assistant = true) {
     document.querySelector('.transcript-panel').classList.toggle('assistant-view', assistant);
     $('assistant-tab').setAttribute('aria-pressed', String(assistant));
@@ -202,6 +264,7 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
     const nextSignature = JSON.stringify(jobs);
     if (signature === nextSignature) return;
     signature = nextSignature;
+    workCards.reset();
     $('agent-welcome').hidden = jobs.length > 0;
     for (const el of feed.querySelectorAll('.agent-turn')) el.remove();
     for (const job of jobs) {
@@ -244,6 +307,8 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
         );
         if (job.result?.length)
           answer.append(node('p', 'dismissed-note', 'Any tools already executed are not undone.'));
+      } else if (job.state === 'interrupted') {
+        answer.append(node('p', 'dismissed-note', 'Interrupted. Listening for your next request.'));
       } else if (job.plan) {
         if (job.plan.answer) answer.append(node('p', '', job.plan.answer));
         if (job.state === 'review') {
@@ -257,8 +322,10 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
           controls.append(confirm, cancel);
           answer.append(controls);
         }
-        for (const receipt of job.result || [])
-          answer.append(node('p', 'tool-receipt', receiptText(receipt)));
+        for (const receipt of job.result || []) {
+          const card = workCards.card(receipt);
+          answer.append(card || node('p', 'tool-receipt', receiptText(receipt)));
+        }
       } else
         answer.append(
           node(
@@ -332,17 +399,28 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
       serverOffset = data.server_time - Date.now() / 1000;
       render();
       renderTimers();
+      const active = jobs.some((job) => ['queued', 'thinking', 'researching'].includes(job.state));
+      $('agent-interrupt').disabled = !active;
       if (jobs.length) {
         const latest = jobs.at(-1);
         onState(latest);
-        if (latest.state === 'completed')
+        if (!userSpeaking) {
+          if (latest.state === 'researching')
+            phase('researching', 'Researching · checking sources');
+          else if (['queued', 'thinking'].includes(latest.state))
+            phase('thinking', 'Thinking · move your lips to interrupt');
+          else if (latest.state === 'completed') phase('ready', 'Your turn');
+          else if (latest.state === 'review') phase('review', 'Action ready for confirmation');
+        }
+        if (!userSpeaking && latest.state === 'completed')
           message(
             $('agent-live-toggle').checked
               ? 'Your turn. Speak and pause for a reply.'
               : 'Review or type your next request.',
           );
-        else if (latest.state === 'review') message('Action ready. Confirm it below to continue.');
-        else if (latest.state === 'thinking') message('Thinking…');
+        else if (!userSpeaking && latest.state === 'review')
+          message('Action ready. Confirm it below to continue.');
+        else if (!userSpeaking && latest.state === 'thinking') message('Thinking…');
       }
     } catch (e) {
       message(e.message);
@@ -350,7 +428,7 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
     schedule(
       document.hidden
         ? 5000
-        : jobs.some((j) => ['queued', 'thinking'].includes(j.state))
+        : jobs.some((j) => ['queued', 'thinking', 'researching'].includes(j.state))
           ? 400
           : 2000,
     );
@@ -362,6 +440,7 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
   window.addEventListener('pagehide', () => {
     clearTimeout(pollTimer);
     clearInterval(timer);
+    workCards.reset();
   });
   return {
     connect() {
@@ -371,8 +450,12 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
       }
     },
     review,
+    speech,
+    interrupt,
     offerCaption(entry) {
       if ($('agent-live-toggle').checked) {
+        if (entry.turn_id && entry.turn_id < latestVisualTurn) return;
+        phase('thinking', 'Thinking · move your lips to interrupt');
         conversation.offer(entry);
       } else if (!dirty && !sending && !dialog.open) fill(entry);
     },

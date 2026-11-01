@@ -45,7 +45,14 @@ check(
     "Model files",
     all(
         (ROOT / "models" / n).exists()
-        for n in ("vsr.pth", "vsr.json", "lm.pth", "lm.json", "face_detector.tflite")
+        for n in (
+            "vsr.pth",
+            "vsr.json",
+            "lm.pth",
+            "lm.json",
+            "face_detector.tflite",
+            "face_landmarker.task",
+        )
     ),
     "checksums: scripts/setup.py --verify-only",
 )

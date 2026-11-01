@@ -7,6 +7,7 @@ export function createAudioEngine() {
     destination,
     analyser,
     playing = 0;
+  const sources = new Set();
   async function unlock() {
     if (!context) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -28,9 +29,11 @@ export function createAudioEngine() {
     source.connect(destination);
     source.connect(analyser);
     playing++;
+    sources.add(source);
     return new Promise((resolve) => {
       source.onended = () => {
         playing--;
+        sources.delete(source);
         source.disconnect();
         resolve();
       };
@@ -46,6 +49,13 @@ export function createAudioEngine() {
   return {
     unlock,
     play,
+    stop() {
+      for (const source of sources) {
+        try {
+          source.stop();
+        } catch {}
+      }
+    },
     level,
     get playing() {
       return playing > 0;

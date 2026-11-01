@@ -698,3 +698,129 @@ select:focus-visible {
   font-size: 11px !important;
   color: #8aa087;
 }
+
+.turn-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 24px 0;
+  gap: 12px;
+  font-size: 11px;
+  color: #afc99f;
+}
+.turn-bar > span:before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: #bfe69c;
+}
+.turn-bar > span[data-phase='thinking']:before,
+.turn-bar > span[data-phase='researching']:before {
+  animation: breath 1s infinite;
+}
+.turn-bar button {
+  border: 1px solid #4a5c40;
+  border-radius: 7px;
+  padding: 6px 9px;
+  color: #c4d8b6;
+  background: transparent;
+  font-size: 10px;
+  cursor: pointer;
+}
+.work-card {
+  margin-top: 14px;
+  border: 1px solid #3e523a;
+  border-radius: 12px;
+  padding: 16px;
+  background: #18251a;
+  overflow: hidden;
+}
+.work-kicker {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: #b3d29c;
+  margin-bottom: 12px;
+}
+.work-card h3 {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+.work-card iframe {
+  width: 100%;
+  height: 250px;
+  border: 1px solid #43563e;
+  border-radius: 7px;
+  background: #fff;
+}
+.research-body {
+  font-size: 13px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #d3e2cc;
+}
+.source-link {
+  color: #c3e7a7;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 11px;
+}
+.work-sources {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
+.work-sources a {
+  padding: 5px 8px;
+  border: 1px solid #3f5638;
+  border-radius: 6px;
+  text-decoration: none;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.work-download,
+.work-open {
+  display: inline-block;
+  border: 1px solid #506d42;
+  padding: 8px 10px;
+  border-radius: 7px;
+  margin: 7px 10px 0 0;
+  background: transparent;
+  color: #c3dfa9;
+  font-size: 11px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.draft-excerpt {
+  font-size: 12px !important;
+  color: #a4b89b;
+  max-height: 100px;
+  overflow: hidden;
+}
+.preview-note {
+  font-size: 10px !important;
+  color: #91a186;
+}
+.work-dialog {
+  width: min(800px, calc(100% - 32px));
+}
+.work-dialog pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    14px/1.8 -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    sans-serif;
+  color: #d8e6d0;
+}
+#camera-interrupt {
+  min-width: 64px;
+}

@@ -10,6 +10,9 @@ export function receiptText(r) {
   if (r.tool === 'start_timer')
     return 'Timer started · ' + r.result.label + ' · ' + r.result.seconds + 's';
   if (r.tool === 'calculate') return r.result.expression + ' = ' + r.result.value;
+  if (r.tool === 'research') return r.result.text;
+  if (r.tool === 'open_page') return 'Page ready · ' + r.result.title;
+  if (r.tool === 'draft_document') return 'Draft ready · ' + r.result.title;
   if (r.tool === 'list_notes')
     return r.result.map((n) => n.text).join('\n') || 'No saved notes yet.';
   return (
@@ -21,6 +24,8 @@ export function agentSummary(job) {
   if (!job) return '';
   if (job.state === 'queued') return 'Request queued';
   if (job.state === 'thinking') return 'Thinking…';
+  if (job.state === 'researching') return 'Researching · checking live sources…';
+  if (job.state === 'interrupted') return 'Interrupted · listening to you';
   if (job.state === 'failed') return job.error;
   if (job.state === 'cancelled') return 'Request cancelled';
   if (job.state === 'dismissed') return 'Misread ignored · continue speaking';

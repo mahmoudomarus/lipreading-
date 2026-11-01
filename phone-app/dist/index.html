@@ -157,8 +157,16 @@
             </div>
             <div class="capture-controls">
               <button id="start" class="start-button" disabled>
-                <span class="record-indicator"></span><span id="start-label">Start reading</span
+                <span class="record-indicator"></span
+                ><span id="start-label">Start conversation</span
                 ><span class="button-shortcut">↗</span></button
+              ><button
+                id="camera-interrupt"
+                class="commit-button"
+                title="Interrupt the answer"
+                aria-label="Interrupt the current answer"
+              >
+                ↯<span>Interrupt</span></button
               ><button
                 id="commit"
                 class="commit-button"
@@ -209,6 +217,10 @@
                 ></label
               ><span>Final lip predictions go to your model</span>
             </div>
+            <div class="turn-bar">
+              <span id="turn-state" data-phase="ready" role="status">Ready · speak and pause</span
+              ><button id="agent-interrupt" disabled>Stop answer</button>
+            </div>
             <div id="agent-panel" class="agent-panel">
               <div id="agent-held" class="agent-held" hidden>
                 <strong>Didn’t catch that.</strong>
@@ -226,7 +238,7 @@
                     agent replies automatically.
                   </p>
                   <div class="agent-capabilities">
-                    <span>Notes ↗</span><span>Timers ↗</span><span>Answers ↗</span>
+                    <span>Notes ↗</span><span>Timers ↗</span><span>Research ↗</span>
                   </div>
                 </div>
               </div>
@@ -458,6 +470,13 @@
       <div class="dialog-tip">
         Face the lens, move close enough to show your lips clearly, and speak naturally.
       </div>
+    </dialog>
+    <dialog id="work-dialog" class="settings-dialog work-dialog">
+      <div class="dialog-top">
+        <h2 id="work-title">Your draft</h2>
+        <button id="work-close" class="icon-button" aria-label="Close draft">×</button>
+      </div>
+      <pre id="work-content"></pre>
     </dialog>
     <dialog id="agent-review-dialog" class="settings-dialog agent-review-dialog">
       <div class="dialog-top">

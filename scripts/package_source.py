@@ -22,6 +22,8 @@ FILES = [
     "pyproject.toml",
     "engine.py",
     "recognition_guard.py",
+    "turn_taking.py",
+    "web_results.py",
     "server.py",
     "provider.py",
     "agent.py",

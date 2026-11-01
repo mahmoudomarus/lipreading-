@@ -44,6 +44,11 @@ let frameCount = 0,
 const finalized = new Set();
 const capturePacer = createFramePacer(25);
 let adaptingVideo = false;
+let visualTurns = false,
+  cameraSession = null,
+  activeVisualTurn = 0,
+  turnPhase = '',
+  voiceEpoch = 0;
 let providerReady = false,
   providerVoice = false,
   latestAgent = null,
@@ -61,6 +66,19 @@ const agentUI = createAgentUI({
     latestAgent = job;
   },
   onSettings: () => openSettings(),
+  onInterrupt: () => {
+    voiceEpoch++;
+    audio.stop();
+    voiceBusy = false;
+    refreshModelControls();
+  },
+  onLiveMode: (enabled) => {
+    if (socket?.readyState === WebSocket.OPEN)
+      socket.send(JSON.stringify({ type: 'conversation', enabled }));
+  },
+  onPhase: (value, text) => {
+    turnPhase = text;
+  },
 });
 const studio = createStudio({
   video,
@@ -72,13 +90,15 @@ const studio = createStudio({
     latency: studioLatency,
     provider: providerVoice,
     agent: latestAgent,
-    phase: voiceBusy
-      ? audio.playing
-        ? 'AI VOICE PLAYBACK'
-        : 'GENERATING AI VOICE'
-      : assistBusy.size
-        ? 'MODEL CONTEXT SELECTION'
-        : '',
+    phase:
+      turnPhase ||
+      (voiceBusy
+        ? audio.playing
+          ? 'AI VOICE PLAYBACK'
+          : 'GENERATING AI VOICE'
+        : assistBusy.size
+          ? 'MODEL CONTEXT SELECTION'
+          : ''),
     canCommit: running && !finishing && !$('commit').disabled,
   }),
   ensureCamera: ensureStudioCamera,
@@ -276,10 +296,20 @@ async function startCapture() {
         () => reject(new Error('The camera connection timed out.')),
         12000,
       );
-      socket.onopen = () => socket.send(JSON.stringify({ token: connection.key, mode }));
+      socket.onopen = () =>
+        socket.send(
+          JSON.stringify({
+            token: connection.key,
+            mode,
+            conversation: $('agent-live-toggle').checked,
+          }),
+        );
       socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'connected') {
+          visualTurns = Boolean(data.visual_turns);
+          cameraSession = data.session_id;
+          activeVisualTurn = 0;
           clearTimeout(timeout);
           resolve();
         }
@@ -434,13 +464,34 @@ function receive(event) {
   } catch {
     return;
   }
-  if (data.type === 'quality') {
+  if (data.type === 'speech_activity') {
+    if (data.event === 'started') activeVisualTurn = data.turn_id;
+    agentUI.speech(data);
+  } else if (data.type === 'utterance') {
+    const entry = {
+      ...data,
+      type: 'result',
+      id: sessionId + ':turn:' + data.turn_id,
+      time: new Date(),
+      cameraSession: sessionId,
+    };
+    for (let i = entries.length - 1; i >= 0; i--)
+      if (entries[i].cameraSession === sessionId && entries[i].turn_id === data.turn_id)
+        entries.splice(i, 1);
+    upsertCaption(entries, entry);
+    renderCaptions();
+    compareReference(entry);
+    agentUI.offerCaption(entry);
+    if (data.turn_id >= activeVisualTurn && data.auto_send !== false)
+      setOverlay(data.text, 'YOUR REQUEST');
+    if (data.auto_send !== false && providerVoice && $('auto-voice').checked) playEntry(entry);
+  } else if (data.type === 'quality') {
     studioQuality = { ...data, at: performance.now() };
     cameraHint(data.message, data.ok ? 'good' : 'warning');
     $('face-guide').classList.toggle('good', data.ok);
     if (data.box && running) positionGuide(data.box);
   } else if (data.type === 'draft') {
-    if (finalized.has(data.sequence)) return;
+    if (finalized.has(data.sequence) || (visualTurns && data.turn_id < activeVisualTurn)) return;
     activeDraft = data.sequence;
     $('transcript-empty').hidden = true;
     $('draft-card').hidden = false;
@@ -460,7 +511,12 @@ function receive(event) {
     $('commit').disabled = true;
   } else if (data.type === 'result') {
     finalized.add(data.sequence);
-    const entry = { ...data, id: sessionId + ':' + data.sequence, time: new Date() };
+    const entry = {
+      ...data,
+      id: sessionId + ':' + data.sequence,
+      time: new Date(),
+      cameraSession: sessionId,
+    };
     upsertCaption(entries, entry);
     renderCaptions();
     if (activeDraft === data.sequence) {
@@ -471,7 +527,8 @@ function receive(event) {
       $('caption-overlay').hidden = true;
       studioCaption = null;
       cameraHint('Unclear reading · keep speaking or correct it', 'warning');
-    } else setOverlay(data.text, 'REFINED');
+    } else if (!data.visual_turns || data.turn_id >= activeVisualTurn)
+      setOverlay(data.text, data.awaiting_pause ? 'LISTENING · CONTINUE YOUR REQUEST' : 'REFINED');
     if (studioCaption) studioCaption.id = entry.id;
     studioLatency = data.processing_seconds.toFixed(2);
     if (Number.isFinite(data.capture_end)) segmentStart = captureStart + data.capture_end * 1000;
@@ -482,12 +539,22 @@ function receive(event) {
         : 'Your phrase is ready.',
     );
     compareReference(entry);
-    agentUI.offerCaption(entry);
+    if (!data.visual_turns) agentUI.offerCaption(entry);
     $('commit').disabled = !running;
     refreshModelControls();
-    if (entry.auto_send !== false && providerReady && $('assist-toggle').checked)
+    if (
+      !data.visual_turns &&
+      entry.auto_send !== false &&
+      providerReady &&
+      $('assist-toggle').checked
+    )
       assistEntry(entry, true);
-    else if (entry.auto_send !== false && providerReady && $('auto-voice').checked)
+    else if (
+      !data.visual_turns &&
+      entry.auto_send !== false &&
+      providerReady &&
+      $('auto-voice').checked
+    )
       playEntry(entry);
   } else if (data.type === 'abstained') {
     finalized.add(data.sequence);
@@ -681,6 +748,7 @@ function commitSentence() {
   }
 }
 $('commit').onclick = commitSentence;
+$('camera-interrupt').onclick = () => agentUI.interrupt();
 $('flip').onclick = () => {
   if (connecting || finishing) return;
   facing = facing === 'user' ? 'environment' : 'user';
@@ -917,6 +985,7 @@ async function assistEntry(entry, automatic = false) {
 }
 async function playEntry(entry) {
   if (!entry || !providerVoice || voiceBusy) return;
+  const epoch = ++voiceEpoch;
   voiceBusy = true;
   refreshModelControls();
   renderCaptions();
@@ -926,6 +995,7 @@ async function playEntry(entry) {
     providerMessage('Generating an AI voice for this predicted caption…');
     const response = await requestAPI('/api/provider/voice', { body: { text }, timeout: 40000 });
     const bytes = await response.arrayBuffer();
+    if (epoch !== voiceEpoch) return;
     if (!entries.includes(entry)) return;
     setOverlay(text, entry.assist ? 'AI VOICE · AI-SELECTED TEXT' : 'AI VOICE · PREDICTED TEXT');
     studioCaption.id = entry.id;
@@ -933,10 +1003,12 @@ async function playEntry(entry) {
     await audio.play(bytes);
     providerMessage('AI voice finished.');
   } catch (error) {
-    providerMessage(error.message, true);
-    status(error.message, 'error');
+    if (epoch === voiceEpoch) {
+      providerMessage(error.message, true);
+      status(error.message, 'error');
+    }
   } finally {
-    voiceBusy = false;
+    if (epoch === voiceEpoch) voiceBusy = false;
     refreshModelControls();
     renderCaptions();
   }
