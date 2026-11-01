@@ -120,6 +120,47 @@ class StreamingTests(unittest.TestCase):
         self.assertLessEqual(len(stream.frames), 260)
         self.assertLessEqual(stream.duration(), 9.8)
 
+    def test_silent_window_abstains_without_a_caption_result(self):
+        from engine import NoSpeech
+
+        class Reader:
+            device = "cpu"
+
+            def begin_session(self):
+                pass
+
+            def analyze(self, samples):
+                raise NoSpeech("No clear visual speech detected.")
+
+        class Monitor:
+            def check(self, frame):
+                return {"type": "quality", "ok": True, "message": "Face clear"}
+
+        previous = server.state.copy()
+        server.state.update(status="ready", reader=Reader(), monitor=Monitor())
+        try:
+            client = TestClient(server.app)
+            _, jpeg = cv2.imencode(".jpg", np.full((128, 160, 3), 100, np.uint8))
+            with client.websocket_connect(
+                "/api/stream", headers={"Origin": "http://testserver"}
+            ) as ws:
+                ws.send_json({"token": server.TOKEN, "mode": "live"})
+                self.assertEqual(ws.receive_json()["type"], "connected")
+                for i in range(39):
+                    ws.send_bytes(struct.pack("<d", i / 25) + jpeg.tobytes())
+                ws.send_json({"type": "finish"})
+                events = []
+                while True:
+                    event = ws.receive_json()
+                    events.append(event)
+                    if event["type"] == "finished":
+                        break
+                self.assertFalse(any(e["type"] in {"draft", "result"} for e in events))
+                self.assertTrue(any(e["type"] == "abstained" and e["silent"] for e in events))
+        finally:
+            server.state.clear()
+            server.state.update(previous)
+
     def test_stream_emits_drafts_then_one_refined_phrase(self):
         class Reader:
             def begin_session(self):

@@ -66,6 +66,20 @@ class ProviderTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(p.key, "")
             self.assertFalse(p.enabled)
 
+    async def test_stronger_model_uses_supported_low_reasoning_with_output_budget(self):
+        def handler(request):
+            body = json.loads(request.content)
+            self.assertEqual(body["reasoning"]["effort"], "low")
+            self.assertGreaterEqual(body["max_output_tokens"], 1800)
+            return httpx.Response(
+                200, json={"output": [{"content": [{"type": "output_text", "text": "Ready"}]}]}
+            )
+
+        provider = TextProvider(transport=httpx.MockTransport(handler))
+        provider.model = "gpt-6.1-sol"
+        provider.enabled = True
+        self.assertEqual(await provider.complete("Reply briefly", "Hello", maximum=30), "Ready")
+
     async def test_endpoint_change_cannot_reuse_old_secret(self):
         p = TextProvider()
         p.key = "private-secret"
@@ -220,6 +234,45 @@ class AgentTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(db.execute("SELECT COUNT(*) FROM notes").fetchone()[0], 0)
         self.store.confirm(job["id"])
         self.assertEqual(self.store.get(job["id"])["state"], "completed")
+
+    def test_repetitive_automatic_caption_cannot_enter_the_queue(self):
+        with self.assertRaises(ValueError):
+            self.submit("PLEASE LET ME EXPLAIN THIS TO YOU " * 4, source="lip_prediction")
+        self.assertEqual(self.store.list(), [])
+
+    async def test_misread_is_preserved_but_excluded_from_later_model_context(self):
+        job = self.submit("A mistaken prediction", source="lip_prediction")
+        await self.store.run_once(self.fake({"answer": "Old answer", "actions": []}))
+        self.store.dismiss(job["id"])
+        self.assertEqual(self.store.get(job["id"])["state"], "dismissed")
+        self.submit("What is two plus two?")
+        captured = []
+
+        class Provider:
+            def snapshot(self):
+                return self
+
+            async def complete(self, instructions, text, **kwargs):
+                captured.append(json.loads(text))
+                return json.dumps({"answer": "Four", "actions": []})
+
+        await self.store.run_once(Provider())
+        self.assertEqual(captured[0]["conversation"], [])
+
+    async def test_dismiss_during_model_call_cannot_be_overwritten_by_its_reply(self):
+        job = self.submit("An uncertain input", source="lip_prediction")
+        store = self.store
+
+        class Provider:
+            def snapshot(self):
+                return self
+
+            async def complete(self, *args, **kwargs):
+                store.dismiss(job["id"])
+                return json.dumps({"answer": "Ignored answer", "actions": []})
+
+        await store.run_once(Provider())
+        self.assertEqual(store.get(job["id"])["state"], "dismissed")
 
     def test_drafts_cannot_enter_agent_queue(self):
         with self.assertRaises(ValueError):

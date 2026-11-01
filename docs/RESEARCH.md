@@ -48,3 +48,9 @@ The next model experiment should compare an actually streaming, visual-only chec
 ## Deliberate limits
 
 The agent can answer from model knowledge, calculate, save local notes, and start local timers. It cannot browse, operate arbitrary apps, send email, post, purchase, or run shell commands. Timers use persisted due times and update on reconnect; there is no push notification or background alarm delivery while the phone is closed. Computer sleep suspends work. Provider requests have bounded timeouts and fail visibly. Jobs interrupted by server restart are marked failed instead of silently repeated.
+
+## Repeated filler follow-up
+
+An observed failure was a repeated, long decoder-generated preface being auto-sent after genuine questions. Empty CTC drafts previously still reached beam decoding; the decoder always returned its best sentence without an abstain outcome. The updated pipeline skips empty drafts, discounts uniform exposure changes in the motion heuristic, and holds self-repeating/implausibly expanded/disagreeing readings. A per-session repeat guard holds near-identical long readings within 45 seconds. These checks do not certify other readings as correct. They need evaluation on natural silence, head movement, and held-out speech, including false rejections.
+
+A synthetic frozen-mouth clip with changing exposure abstained before encoding/decoding; a public speech clip still decoded. This is a narrow regression check, not an accuracy result. The agent default was upgraded to `gpt-6.1-sol` using supported low reasoning effort. Two isolated live requests completed in 2.96 and 2.33 seconds; this does not change the specialist visual model's accuracy. Misread turns can be dismissed from conversation context while retaining their audit record.

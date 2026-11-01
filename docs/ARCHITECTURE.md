@@ -6,6 +6,7 @@
 agent.py                  SQLite jobs, validated plans, local tools and receipts
 provider.py               Generic Responses / Chat-compatible text adapter
 engine.py                 Visual recognition, preprocessing and framing feedback
+recognition_guard.py      Uncalibrated abstention/repetition checks
 server.py                 Authenticated HTTP + camera WebSocket; static assets
 openai_bridge.py          Optional legacy speech/candidate adapter
 video_export.py           Bounded FFmpeg conversion with temporary-file cleanup
@@ -21,9 +22,11 @@ docs/                     Setup, research, architecture and contribution roadmap
 
 ## Recognition pipeline
 
-The phone requests video with `audio:false`, captures distinct sensor frames, encodes JPEGs up to 800 pixels on the long edge, and applies WebSocket backpressure. Binary packets consist of an 8-byte little-endian float64 capture timestamp in seconds followed by JPEG bytes. The first WebSocket message authenticates the session. Hostile sizes, unsupported image dimensions, slow delivery, and changed frame timing are rejected.
+The phone requests video with `audio:false`, paces distinct sensor frames to 25 FPS without retiming them, encodes JPEGs up to 800 pixels on the long edge, and applies WebSocket backpressure. Binary packets consist of an 8-byte little-endian float64 capture timestamp in seconds followed by JPEG bytes. The first WebSocket message authenticates the session. Hostile sizes, unsupported image dimensions, slow delivery, and changed frame timing are rejected.
 
 The server keeps a bounded utterance buffer, resamples to 25 FPS while preserving elapsed time, detects/alines a face using MediaPipe and the upstream cropper, and normalizes mouth crops for Auto-AVSR. Cached detections are scoped to the capture session. CNN/Conformer features and CTC drafts are recomputed for growing windows. Full decoding refines the phrase on manual finish, a heuristic pause, or the window limit. Finalized frames are consumed once; new frames arriving during inference are retained.
+
+Empty visual drafts never trigger beam decoding. Exposure-normalized mouth-region motion rejects nearly static frames. Repeated 4-grams, implausible word rates, excessive beam expansion/disagreement, and near-duplicate long readings are held rather than auto-sent. These are conservative heuristics, not calibrated confidence; they can miss errors and reject valid speech.
 
 This is **windowed offline inference**, not a causal streaming model. Quality guidance measures framing, lighting, and motion. Neither it nor decoder alternatives are calibrated word confidence. Do not map similarity scores to a confidence percentage.
 
@@ -61,6 +64,8 @@ All `/api/` HTTP routes require `Authorization: Bearer <app-access-token>`. `/ap
 | `POST /api/agent/jobs/{id}/confirm` | Execute a pending write proposal once |
 | `POST /api/agent/jobs/{id}/cancel` | Cancel a queued job or pending proposal |
 | `POST /api/export` | Convert a bounded browser recording to MP4 |
+
+Automatic jobs may be marked `dismissed` using `POST /api/agent/jobs/{id}/dismiss`. They remain in the audit record but are excluded from later model context; already executed tools are not undone. A reply arriving after dismissal cannot restore the job.
 
 `/api/openai/*` routes remain for compatibility with the earlier private prototype. New UI/integrations should use the generic provider routes. API documentation is intentionally not served publicly; this prototype has no stable versioned external API promise yet.
 

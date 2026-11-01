@@ -10,12 +10,19 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from recognition_guard import review_reason
 
 ROOT = Path(__file__).resolve().parent
 VENDOR = ROOT / "vendor" / "chaplin"
 
 
 class CaptureError(ValueError):
+    pass
+
+
+class NoSpeech(CaptureError):
+    """No visual speech evidence; clear the window without inventing a caption."""
+
     pass
 
 
@@ -62,6 +69,16 @@ def resample_frames(samples, fps=25, *, include_times=False):
     indices = np.where(abs(times[left] - target) <= abs(times[right] - target), left, right)
     result = (np.stack([samples[i][1] for i in indices]), duration, source_fps)
     return (*result, times[indices]) if include_times else result
+
+
+def mouth_motion(patches):
+    # Ignore uniform exposure changes; they are not articulatory movement.
+    delta = np.diff(patches.astype(np.float32), axis=0)
+    if not len(delta):
+        return 0.0
+    delta -= np.median(delta, axis=(1, 2), keepdims=True)
+    h, w = patches.shape[1:3]
+    return float(np.mean(np.abs(delta[:, h // 4 : 3 * h // 4, w // 6 : 5 * w // 6])))
 
 
 class LipReader:
@@ -229,9 +246,9 @@ class LipReader:
         patches = self.crop(frames, landmarks)
         if patches is None or patches.shape[1:3] != (96, 96):
             raise CaptureError("Could not align your face. Look straight at the camera.")
-        motion = float(np.mean(np.abs(np.diff(patches.astype(np.float32), axis=0))))
+        motion = mouth_motion(patches)
         if motion < 0.65:
-            raise CaptureError("Very little movement detected. Speak a short phrase and try again.")
+            raise NoSpeech("No clear lip movement detected.")
         data = self.transform(self.torch.from_numpy(patches))
         preprocess_seconds = time.perf_counter() - started
         with self.torch.inference_mode():
@@ -265,6 +282,7 @@ class LipReader:
             "device": self.device,
             "preprocess_seconds": round(preprocess_seconds, 3),
             "cached_detections": cache_hits,
+            "mouth_motion": round(motion, 3),
             "trailing_blank_seconds": round(trailing, 2),
         }
         return {"features": features, "metadata": metadata, "started": started}
@@ -280,6 +298,8 @@ class LipReader:
 
     def refine(self, analysis, thorough=True):
         started = time.perf_counter()
+        if not analysis["metadata"]["text"].strip():
+            raise NoSpeech("No clear visual speech detected.")
         with self.torch.inference_mode():
             hypotheses = (self.model.beam_search if thorough else self.fast_search)(
                 analysis["features"]
@@ -291,8 +311,16 @@ class LipReader:
                 alternatives.append(text)
         if not alternatives:
             raise CaptureError("No words decoded. Try a complete, naturally spoken phrase.")
+        reason = review_reason(
+            alternatives[0],
+            draft=analysis["metadata"]["text"],
+            duration=analysis["metadata"]["duration"],
+        )
         return {
             **analysis["metadata"],
+            "auto_send": reason is None,
+            "needs_review": reason is not None,
+            "review_reason": reason,
             "type": "result",
             "text": alternatives[0],
             "alternatives": alternatives[1:3],

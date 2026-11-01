@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+Prevent empty visual drafts from triggering fluent beam-decoder guesses; hold repetitive, unsupported and recent duplicate long readings. Add silence abstention and Misread dismissal with context isolation. Pace camera delivery to 25 FPS without reducing sensor cadence to 15 FPS. Upgrade the default conversation model to GPT-6.1 Sol with low reasoning effort; text provider remains replaceable.
+
+
 Live conversation sends finalized visual predictions to the agent automatically, with optional manual review. Automatic turns retain provenance and idempotency IDs; drafts are excluded. Notes and timers still require confirmation. Poll responses preserve recent/completed turns rather than rolling the UI backward.
 
 ## 0.1.0 — 2026-11-01

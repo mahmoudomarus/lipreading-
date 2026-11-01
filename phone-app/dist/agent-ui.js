@@ -28,8 +28,23 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
     connected = true;
     schedule(100);
   }
+  let heldCaption = null;
+  $('agent-held-edit').onclick = () => {
+    if (heldCaption) review(heldCaption);
+  };
+  $('agent-held-ignore').onclick = () => {
+    $('agent-held').hidden = true;
+    heldCaption = null;
+  };
   const conversation = createConversation({
+    onHold(entry) {
+      heldCaption = entry;
+      $('agent-held').hidden = false;
+      $('agent-held-reason').textContent = entry.review_reason || 'I couldn’t read that clearly.';
+      message('Unclear reading held back. Keep speaking, or correct it below.');
+    },
     async send(body) {
+      $('agent-held').hidden = true;
       message('Sending your phrase…');
       const response = await requestAPI('/api/agent/jobs', { body });
       acceptJob(await response.json());
@@ -204,6 +219,12 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
         ),
         node('p', '', job.input),
       );
+      if (job.source === 'lip_prediction' && job.state !== 'dismissed') {
+        const misread = node('button', 'misread-button', 'Misread · ignore');
+        misread.onclick = () => operate(job, 'dismiss', misread);
+        user.append(misread);
+      }
+      if (job.state === 'dismissed') user.classList.add('dismissed-turn');
       turn.append(user);
       const answer = node('div', 'agent-answer');
       answer.append(
@@ -217,7 +238,13 @@ export function createAgentUI({ requestAPI, getLatest, onState, onSettings }) {
               : 'AGENT · ' + job.state.toUpperCase(),
         ),
       );
-      if (job.plan) {
+      if (job.state === 'dismissed') {
+        answer.append(
+          node('p', 'dismissed-note', 'Misread ignored. It won’t influence future replies.'),
+        );
+        if (job.result?.length)
+          answer.append(node('p', 'dismissed-note', 'Any tools already executed are not undone.'));
+      } else if (job.plan) {
         if (job.plan.answer) answer.append(node('p', '', job.plan.answer));
         if (job.state === 'review') {
           for (const action of job.plan.actions)

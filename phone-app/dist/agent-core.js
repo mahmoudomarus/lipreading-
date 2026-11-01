@@ -23,6 +23,7 @@ export function agentSummary(job) {
   if (job.state === 'thinking') return 'Thinking…';
   if (job.state === 'failed') return job.error;
   if (job.state === 'cancelled') return 'Request cancelled';
+  if (job.state === 'dismissed') return 'Misread ignored · continue speaking';
   if (job.state === 'review')
     return 'Awaiting confirmation · ' + job.plan.actions.map(actionLabel).join(' / ');
   return job.result?.length ? job.result.map(receiptText).join('\n') : job.plan?.answer || '';

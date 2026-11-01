@@ -1,3 +1,4 @@
+import { createFramePacer } from './capture-pacer.js';
 import { createAgentUI } from './agent-ui.js';
 import {
   readConnection,
@@ -41,6 +42,8 @@ let frameCount = 0,
   activeDraft,
   restartAfterStop = false;
 const finalized = new Set();
+const capturePacer = createFramePacer(25);
+let adaptingVideo = false;
 let providerReady = false,
   providerVoice = false,
   latestAgent = null,
@@ -299,6 +302,8 @@ async function startCapture() {
     sessionId = String(Date.now());
     captureStart = segmentStart = fpsStart = performance.now();
     frameCount = 0;
+    capturePacer.reset(performance.now());
+    adaptingVideo = false;
     lastCapture = 0;
     lastMediaTime = -1;
     activeDraft = null;
@@ -358,14 +363,19 @@ function captureFrame(now, mediaTime) {
     !sending ||
     encoding ||
     video.readyState < 2 ||
-    now - lastCapture < 32 ||
     mediaTime === lastMediaTime ||
-    socket?.readyState !== WebSocket.OPEN
+    socket?.readyState !== WebSocket.OPEN ||
+    !capturePacer.due(now)
   )
     return;
-  if (socket.bufferedAmount > 750000) {
-    status('The connection is slow. Move to stronger Wi-Fi for clearer motion.', 'error');
+  if (socket.bufferedAmount > 180000) {
+    adaptingVideo = true;
+    status('Adapting video delivery to keep the camera live.');
     return;
+  }
+  if (adaptingVideo) {
+    adaptingVideo = false;
+    status('Video delivery recovered. Keep speaking naturally.');
   }
   lastCapture = now;
   lastMediaTime = mediaTime;
@@ -457,8 +467,12 @@ function receive(event) {
       activeDraft = null;
       $('draft-card').hidden = true;
     }
-    setOverlay(data.text, 'REFINED');
-    studioCaption.id = entry.id;
+    if (data.auto_send === false) {
+      $('caption-overlay').hidden = true;
+      studioCaption = null;
+      cameraHint('Unclear reading · keep speaking or correct it', 'warning');
+    } else setOverlay(data.text, 'REFINED');
+    if (studioCaption) studioCaption.id = entry.id;
     studioLatency = data.processing_seconds.toFixed(2);
     if (Number.isFinite(data.capture_end)) segmentStart = captureStart + data.capture_end * 1000;
     $('latency').textContent = data.processing_seconds.toFixed(2) + 's phrase processing';
@@ -471,8 +485,21 @@ function receive(event) {
     agentUI.offerCaption(entry);
     $('commit').disabled = !running;
     refreshModelControls();
-    if (providerReady && $('assist-toggle').checked) assistEntry(entry, true);
-    else if (providerReady && $('auto-voice').checked) playEntry(entry);
+    if (entry.auto_send !== false && providerReady && $('assist-toggle').checked)
+      assistEntry(entry, true);
+    else if (entry.auto_send !== false && providerReady && $('auto-voice').checked)
+      playEntry(entry);
+  } else if (data.type === 'abstained') {
+    finalized.add(data.sequence);
+    if (activeDraft === data.sequence) {
+      activeDraft = null;
+      $('draft-card').hidden = true;
+    }
+    $('caption-overlay').hidden = true;
+    studioCaption = null;
+    if (Number.isFinite(data.capture_end)) segmentStart = captureStart + data.capture_end * 1000;
+    if (!data.silent) status(data.message, 'error');
+    else status('Listening for your next phrase.');
   } else if (data.type === 'guidance' || data.type === 'error') {
     status(data.message, 'error');
   } else if (data.type === 'ready') {
@@ -518,7 +545,7 @@ function renderCaptions() {
     meta.className = 'entry-meta';
     const tag = document.createElement('span');
     tag.className = 'refined';
-    tag.textContent = 'Refined phrase';
+    tag.textContent = entry.auto_send === false ? 'Unclear · not sent' : 'Refined phrase';
     const time = document.createElement('time');
     time.textContent = entry.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     meta.append(tag, time);

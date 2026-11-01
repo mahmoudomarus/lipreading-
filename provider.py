@@ -36,7 +36,7 @@ class TextProvider:
         self.transport = transport
         self.protocol = os.getenv("AGENT_PROTOCOL", "responses")
         self.base = endpoint(os.getenv("AGENT_BASE_URL", "https://api.openai.com/v1"))
-        self.model = os.getenv("AGENT_MODEL", os.getenv("OPENAI_TEXT_MODEL", "gpt-6-luna"))
+        self.model = os.getenv("AGENT_MODEL", os.getenv("OPENAI_TEXT_MODEL", "gpt-6.1-sol"))
         legacy_key = (
             os.getenv("OPENAI_API_KEY", "") if self.base == "https://api.openai.com/v1" else ""
         )
@@ -120,7 +120,14 @@ class TextProvider:
                 "max_output_tokens": maximum,
             }
             if self.model.startswith("gpt-6"):
-                payload["reasoning"] = {"effort": "none"}
+                effort = (
+                    "low"
+                    if self.model.startswith(("gpt-6.1-sol", "gpt-6-sol", "gpt-6-astra"))
+                    else "none"
+                )
+                payload["reasoning"] = {"effort": effort}
+                if effort == "low":
+                    payload["max_output_tokens"] = max(1800, maximum)
             if schema:
                 payload["text"] = {
                     "format": {

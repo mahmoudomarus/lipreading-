@@ -19,11 +19,12 @@ from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconne
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from engine import CaptureError, LipReader, QualityMonitor, decode_frame
+from engine import CaptureError, NoSpeech, LipReader, QualityMonitor, decode_frame
 from openai_bridge import OpenAIBridge, BridgeError
 from video_export import export_mp4, ExportError
 from provider import TextProvider, ProviderError
 from agent import AgentStore
+from recognition_guard import RecognitionGuard, review_reason
 
 ROOT = Path(__file__).resolve().parent
 RUNTIME = ROOT / ".runtime"
@@ -265,6 +266,8 @@ async def agent_operation(job_id: str, operation: str, request: Request):
             return agent_store.confirm(job_id)
         if operation == "cancel":
             return agent_store.cancel(job_id)
+        if operation == "dismiss":
+            return agent_store.dismiss(job_id)
         raise ValueError("Unknown operation.")
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None
@@ -376,6 +379,7 @@ async def stream(ws: WebSocket):
         # All inference is serialized, so cache entries cannot cross speakers.
         await asyncio.get_running_loop().run_in_executor(executor, state["reader"].begin_session)
         buffer = StreamBuffer()
+        guard = RecognitionGuard()
         mode = hello.get("mode", "live")
         mode = mode if mode in {"live", "phrase"} else "live"
         task = quality_task = None
@@ -423,7 +427,9 @@ async def stream(ws: WebSocket):
                         analysis = await native(executor, state["reader"].analyze, samples)
                     last_analysis = (segment, endpoint, analysis)
                     metadata = analysis["metadata"]
-                    if metadata["text"]:
+                    if metadata["text"] and not review_reason(
+                        metadata["text"], duration=metadata.get("duration")
+                    ):
                         await send(
                             {
                                 **metadata,
@@ -447,16 +453,27 @@ async def stream(ws: WebSocket):
                         result = await native(
                             executor, state["reader"].refine, analysis, mode == "phrase"
                         )
+                        result.update(guard.assess(result, endpoint))
                         await send(
                             {**result, "sequence": segment, "mode": mode, "capture_end": endpoint}
                         )
                         buffer.finalize(endpoint)
                         last_analysis = None
                 except CaptureError as exc:
-                    await send({"type": "guidance", "message": str(exc), "sequence": segment})
+                    if not isinstance(exc, NoSpeech):
+                        await send({"type": "guidance", "message": str(exc), "sequence": segment})
                     if force_final:
                         buffer.finalize(endpoint)
                         last_analysis = None
+                        await send(
+                            {
+                                "type": "abstained",
+                                "silent": isinstance(exc, NoSpeech),
+                                "message": str(exc),
+                                "sequence": segment,
+                                "capture_end": endpoint,
+                            }
+                        )
                 except Exception:
                     log.exception("Recognition failed")
                     await send(

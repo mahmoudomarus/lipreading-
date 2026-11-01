@@ -662,3 +662,39 @@ select:focus-visible {
   padding: 6px;
   cursor: pointer;
 }
+
+.agent-held {
+  margin: 14px 18px 0;
+  padding: 14px;
+  border: 1px solid #635b3f;
+  border-radius: 10px;
+  background: #29271a;
+  color: #e5dab3;
+  font-size: 12px;
+}
+.agent-held p {
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 6px 0 10px;
+}
+.agent-held button,
+.misread-button {
+  border: 0;
+  background: none;
+  color: #aac79c;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 5px 0;
+  margin-right: 15px;
+}
+.misread-button {
+  color: #89a786;
+  margin-top: 6px;
+}
+.dismissed-turn {
+  opacity: 0.45;
+}
+.dismissed-note {
+  font-size: 11px !important;
+  color: #8aa087;
+}

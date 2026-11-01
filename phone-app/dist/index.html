@@ -210,6 +210,12 @@
               ><span>Final lip predictions go to your model</span>
             </div>
             <div id="agent-panel" class="agent-panel">
+              <div id="agent-held" class="agent-held" hidden>
+                <strong>Didn’t catch that.</strong>
+                <p id="agent-held-reason"></p>
+                <button id="agent-held-edit" type="button">Correct reading ↗</button
+                ><button id="agent-held-ignore" type="button">Keep listening</button>
+              </div>
               <div class="agent-feed" id="agent-feed" role="log" aria-live="polite">
                 <div class="agent-welcome" id="agent-welcome">
                   <div class="agent-orb">✳</div>

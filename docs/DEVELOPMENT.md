@@ -57,7 +57,7 @@ Python uses Ruff 0.15.10 and frontend source uses the locked Prettier version. T
 
 ```sh
 .venv/bin/python -m pip install -r requirements-dev.txt
-.venv/bin/ruff format agent.py engine.py provider.py server.py openai_bridge.py video_export.py scripts tests
+.venv/bin/ruff format agent.py engine.py recognition_guard.py provider.py server.py openai_bridge.py video_export.py scripts tests
 npm --prefix phone-app ci
 npm --prefix phone-app run format
 ```

@@ -1,5 +1,11 @@
 // Finalized camera turns are serialized separately from drafts and manual edits.
-export function createConversation({ send, onError, onQueue, makeId = () => crypto.randomUUID() }) {
+export function createConversation({
+  send,
+  onError,
+  onQueue,
+  onHold,
+  makeId = () => crypto.randomUUID(),
+}) {
   const known = new Map();
   const queue = [];
   let enabled = true;
@@ -36,6 +42,12 @@ export function createConversation({ send, onError, onQueue, makeId = () => cryp
       // No provisional drafts, empty captions, repeated transport events or invented IDs.
       if (!enabled || entry?.type !== 'result' || !entry.id || !entry.text?.trim()) return false;
       if (known.has(entry.id)) return false;
+      if (entry.auto_send === false) {
+        known.set(entry.id, { state: 'held' });
+        if (known.size > 500) known.delete(known.keys().next().value);
+        onHold?.(entry);
+        return false;
+      }
       if (queue.length >= 8) {
         onError?.(new Error('Conversation is busy. Pause and try that phrase again.'));
         return false;

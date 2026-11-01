@@ -21,6 +21,7 @@ FILES = [
     "requirements-dev.txt",
     "pyproject.toml",
     "engine.py",
+    "recognition_guard.py",
     "server.py",
     "provider.py",
     "agent.py",

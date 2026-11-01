@@ -109,3 +109,18 @@ test('polling cannot erase a recent auto-turn or roll back a completed receipt',
     [completed, queued],
   );
 });
+
+test('an unsupported final caption is held for correction and never auto-sent', async () => {
+  const sent = [],
+    held = [];
+  const flow = createConversation({
+    send: async (body) => sent.push(body),
+    onHold: (entry) => held.push(entry),
+  });
+  const entry = { ...result('held'), auto_send: false, review_reason: 'Repetitive reading' };
+  assert.equal(flow.offer(entry), false);
+  flow.offer(entry);
+  await flow.settled();
+  assert.equal(sent.length, 0);
+  assert.equal(held.length, 1);
+});
