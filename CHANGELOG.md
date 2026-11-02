@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Send up to two alternative lip readings with each automatic request so the assistant can resolve look-alike misreads, stating its guess. Notes and timers proposed from a guess still require confirmation.
+
 Remove the recording studio, MP4 export route and FFmpeg dependency. Speak each new assistant reply aloud behind a Speak replies switch; lip movement stops playback without cancelling tasks. Smooth lip shapes and require sustained movement so turns end on small or noisy faces.
 
 Update the camera send-rate display on a timer so stalled delivery reports zero instead of retaining a stale FPS value.

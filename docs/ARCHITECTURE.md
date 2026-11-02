@@ -39,7 +39,7 @@ The browser paces distinct frames toward 25 FPS, resizes to 800 pixels and appli
 
 The recognizer repeatedly processes offline windows. The advice thresholds for face size and head angle are stricter than rejection thresholds so the UI can suggest improvements before capture fails. [Recognition limitations](../README.md#1-what-it-is).
 
-Single-part turns retain their native alternatives. Multi-part turns keep earlier best readings and substitute only alternatives from the last part, with at most two distinct full-turn alternatives. Drafts are joined only when every part supplied real draft text. A held part keeps the complete turn held. Manual comparison uses the existing text selector and is disabled when no distinct supported candidate exists. Automatic selection is not enabled on assembled visual turns.
+Single-part turns retain their native alternatives. Multi-part turns keep earlier best readings and substitute only alternatives from the last part, with at most two distinct full-turn alternatives. Drafts are joined only when every part supplied real draft text. A held part keeps the complete turn held. Manual comparison uses the existing text selector and is disabled when no distinct supported candidate exists. Automatic selection is not enabled on assembled visual turns. Automatically sent turns pass up to two alternatives with the request; the planner receives them as `other_readings` (stored in the job's nullable `alternatives` column, added in place on older databases) to infer garbled requests, and write tools still require confirmation.
 
 ## Agent state and execution
 

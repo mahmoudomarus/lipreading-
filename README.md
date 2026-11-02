@@ -182,6 +182,8 @@ The included research adapter requires the supported hosted Responses endpoint. 
 
 With **Live replies** enabled, eligible finalized turns are submitted automatically. Drafts never submit. Switch it off to review, edit and send manually. An inherited chunk hold stays blocking through final turn assembly; it can hold a correct reading too. Correct the text or repeat the phrase, then explicitly review/send it.
 
+Automatically sent lip readings carry up to two alternative readings of the same lip movements. The assistant uses them, with the conversation, to work out what you most likely meant and says when it is guessing ("Sounds like you want..."). Notes and timers proposed from a guess still wait for your confirmation.
+
 **Compare readings** chooses among existing candidates when at least two supported alternatives exist. Selection changes the caption display only; explicitly review/send that selection to create a request with those exact words. It does not revise an existing task. **Cancel and edit** cancels a selected active task, opens its text for editing, and sends the replacement under a new UUID. Old confirmations cannot execute cancelled details. **Misread · ignore** excludes a finished mistaken request from future context; cancel active work first. Completed receipts remain truthful. Typed requests use the same planner and tools and help separate tool problems from recognition errors.
 
 | Tool | Behavior |

@@ -15,7 +15,19 @@ test('a final phrase automatically sends once; provisional drafts never send', a
   assert.equal(flow.offer(result('a')), true);
   assert.equal(flow.offer(result('a')), false);
   await flow.settled();
-  assert.deepEqual(sent, [{ text: 'Hello there', source: 'lip_prediction', request_id: 'turn-1' }]);
+  assert.deepEqual(sent, [
+    { text: 'Hello there', alternatives: [], source: 'lip_prediction', request_id: 'turn-1' },
+  ]);
+});
+test('alternative readings travel with the turn so the assistant can resolve misreads', async () => {
+  const sent = [];
+  const flow = createConversation({
+    send: async (body) => sent.push(body),
+    makeId: () => 'turn-1',
+  });
+  flow.offer({ ...result('a'), alternatives: ['Hello hair', 'Yellow there', 'Hollow tear'] });
+  await flow.settled();
+  assert.deepEqual(sent[0].alternatives, ['Hello hair', 'Yellow there']);
 });
 test('different utterances with the same words remain separate turns', async () => {
   const sent = [];

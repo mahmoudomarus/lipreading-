@@ -273,6 +273,52 @@ class AgentTests(unittest.IsolatedAsyncioTestCase):
         await self.store.run_once(Provider())
         self.assertEqual(captured[0]["conversation"], [])
 
+    async def test_alternative_lip_readings_reach_the_planner(self):
+        job = self.store.submit(
+            "HELLO HAIR",
+            "lip_prediction",
+            str(uuid.uuid4()),
+            ["HELLO THERE", "HELLO HAIR", "YELLOW THERE", " "],
+        )
+        self.assertEqual(job["alternatives"], ["HELLO THERE", "YELLOW THERE"])
+        captured = []
+
+        class Provider:
+            def snapshot(self):
+                return self
+
+            async def complete(self, instructions, text, **kwargs):
+                captured.append((instructions, json.loads(text)))
+                return json.dumps({"answer": "Hi", "actions": []})
+
+        await self.store.run_once(Provider())
+        instructions, payload = captured[0]
+        self.assertEqual(payload["other_readings"], ["HELLO THERE", "YELLOW THERE"])
+        self.assertIn("other_readings", instructions)
+
+    def test_alternatives_are_validated_and_ignored_for_typed_requests(self):
+        typed = self.store.submit("Hello", "typed", str(uuid.uuid4()), ["Yellow"])
+        self.assertIsNone(typed["alternatives"])
+        for bad in ("HELLO", [1], ["x" * 1201], ["a", "b", "c", "d", "e"]):
+            with self.assertRaises(ValueError):
+                self.store.submit("Hello", "lip_prediction", str(uuid.uuid4()), bad)
+
+    def test_existing_database_gains_the_alternatives_column(self):
+        import sqlite3
+
+        path = Path(self.tmp.name) / "old.db"
+        with sqlite3.connect(path) as db:
+            db.execute(
+                "CREATE TABLE jobs(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, input TEXT NOT NULL, source TEXT NOT NULL, state TEXT NOT NULL, created REAL NOT NULL, updated REAL NOT NULL, plan TEXT, result TEXT, error TEXT)"
+            )
+            db.execute(
+                "INSERT INTO jobs VALUES('a','f','Old request','typed','completed',1,1,NULL,NULL,NULL)"
+            )
+        store = AgentStore(path)
+        self.assertIsNone(store.get("a")["alternatives"])
+        job = store.submit("New", "lip_prediction", str(uuid.uuid4()), ["Knew"])
+        self.assertEqual(job["alternatives"], ["Knew"])
+
     async def test_cancel_during_model_call_cannot_be_overwritten_by_its_reply(self):
         job = self.submit("An uncertain input", source="lip_prediction")
         store = self.store

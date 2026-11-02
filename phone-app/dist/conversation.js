@@ -26,6 +26,7 @@ export function createConversation({
         try {
           const job = await send({
             text: turn.text,
+            alternatives: turn.alternatives,
             source: 'lip_prediction',
             request_id: turn.id,
           });
@@ -63,7 +64,13 @@ export function createConversation({
         onError?.(new Error('Conversation is busy. Pause and try that phrase again.'));
         return false;
       }
-      const turn = { key: entry.id, id: makeId(), text: entry.text.trim(), state: 'queued' };
+      const turn = {
+        key: entry.id,
+        id: makeId(),
+        text: entry.text.trim(),
+        alternatives: (entry.alternatives || []).slice(0, 2),
+        state: 'queued',
+      };
       known.set(entry.id, turn);
       // Keep only a bounded deduplication window; the server also deduplicates request UUIDs.
       if (known.size > 500) known.delete(known.keys().next().value);

@@ -205,7 +205,11 @@ async def agent_submit(request: Request):
         raise HTTPException(400, "Connect a model in Settings first.")
     try:
         return await runtime.agent_store.async_db(
-            runtime.agent_store.submit, body.get("text"), body.get("source"), body.get("request_id")
+            runtime.agent_store.submit,
+            body.get("text"),
+            body.get("source"),
+            body.get("request_id"),
+            body.get("alternatives"),
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None
