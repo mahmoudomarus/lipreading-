@@ -112,7 +112,7 @@ Exact assets, roles and provenance are in [the model reference](docs/MODELS.md).
 .venv/bin/python scripts/service.py stop
 ```
 
-Use one launcher at a time. It binds `127.0.0.1:8765` and starts a temporary HTTPS tunnel. Model initialization continues after the web server starts; wait for Ready. For a camera on this same computer, use the printed **computer link**, saved in `.runtime/computer-url`; it connects directly to `127.0.0.1:8765`. For a phone, use the separate HTTPS link saved in `.runtime/phone-url` or QR image `.runtime/phone-qr.png`. Logs are `.runtime/server.log` and, for detached operation, `.runtime/service.log`. These can contain sensitive diagnostics and the private link.
+Use one launcher at a time. It binds `127.0.0.1:8765` and starts a temporary HTTPS tunnel. Model initialization continues after the web server starts; wait for Ready. For a camera on this same computer, use the printed **computer link**, saved in `.runtime/computer-url`; it connects directly to `127.0.0.1:8765`. For a phone, use the separate HTTPS link saved in `.runtime/phone-url` or QR image `.runtime/phone-qr.png`. Logs are `.runtime/server.log` and, for detached operation, `.runtime/service.log`. Camera diagnostics include frame/byte totals, decode timings, lip-activity transitions, hold reasons and close causes; they omit caption text and access keys. These can contain sensitive diagnostics and the private link.
 
 A tunnel restart changes its origin: reopen the newest link. Detached operation is not a login service and does not prevent sleep or restart on reboot. Change environment settings before restarting the process.
 

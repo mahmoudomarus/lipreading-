@@ -88,3 +88,5 @@ Add provider protocols in `provider.py`, retaining server-side keys and local pl
 ## Shared configuration
 
 `config.py` defines protocol 4, first draft context 1.35 s, draft interval 0.9 s, minimum capture 0.7 s, maximum decode window 8.0 s, Phrase limit 7.8 s, buffer limit 9.8 s / 260 frames, and the validated concurrency limit (default 3, range 1 to 12). These are scheduling bounds, not measured delivery latency. Quality, mouth activity and recognition each have a separate single-thread executor; all agent tasks share one async worker with bounded concurrency. Failed scheduled camera work sends an error before closing the socket.
+
+Camera-session logs retain metadata for frame delivery, lip-activity transitions, decode time, holds and the close reason. They omit transcripts and keys. A 25-second receive timeout sends an explanatory error before closing; the browser retains the error while checking server readiness.

@@ -59,6 +59,9 @@ class StreamSession:
         self.mouth_speaking = False
         self.send_lock = asyncio.Lock()
         self.rate_start, self.rate_count = (time.monotonic(), 0)
+        self.started_at = time.monotonic()
+        self.received_frames = self.received_bytes = 0
+        self.mouth_available = None
 
     async def send(self, data):
         async with self.send_lock:
@@ -97,6 +100,14 @@ class StreamSession:
                     needs_review=True,
                     review_reason="That turn was too long. Try a shorter request.",
                 )
+            log.info(
+                "Camera turn session=%s turn=%d duration=%.2fs auto_send=%s hold=%s",
+                self.session_id,
+                turn_id,
+                result["duration"],
+                result["auto_send"],
+                result.get("review_reason"),
+            )
             await self.send({**result, "session_id": self.session_id})
         else:
             await self.send(
@@ -116,6 +127,16 @@ class StreamSession:
             activity = await self.native(
                 self.runtime.mouth_executor, self.mouth.check, frame, timestamp
             )
+            if activity.get("event") or activity.get("available") != self.mouth_available:
+                self.mouth_available = activity.get("available")
+                log.info(
+                    "Lip activity session=%s capture=%.2fs event=%s available=%s movement=%s",
+                    self.session_id,
+                    timestamp,
+                    activity.get("event"),
+                    self.mouth_available,
+                    activity.get("movement"),
+                )
             if activity["event"] == "started":
                 start = (
                     activity["speech_start"]
@@ -142,6 +163,15 @@ class StreamSession:
 
     async def recognize(self, samples, segment, force_final=False, turn_id=0, ending=False):
         endpoint = samples[-1][0]
+        started = time.monotonic()
+        log.info(
+            "Camera decode session=%s sequence=%d frames=%d capture_end=%.2fs final=%s",
+            self.session_id,
+            segment,
+            len(samples),
+            endpoint,
+            force_final,
+        )
         async with self.runtime.inference_lock:
             try:
                 if (
@@ -209,6 +239,7 @@ class StreamSession:
                         if turn_id == self.active_turn:
                             self.speech_open = self.mouth_speaking
             except CaptureError as exc:
+                log.info("Camera capture held session=%s reason=%s", self.session_id, exc)
                 if not isinstance(exc, NoSpeech):
                     await self.send({"type": "guidance", "message": str(exc), "sequence": segment})
                 if force_final:
@@ -241,6 +272,12 @@ class StreamSession:
                     self.buffer.finalize(endpoint)
                     self.last_analysis = None
             finally:
+                log.info(
+                    "Camera decode finished session=%s sequence=%d elapsed=%.3fs",
+                    self.session_id,
+                    segment,
+                    time.monotonic() - started,
+                )
                 await self.send({"type": "ready"})
 
     async def finish_short(self, turn_id, endpoint):
@@ -317,16 +354,20 @@ class StreamSession:
                 "session_id": self.session_id,
             }
         )
+        reason = "peer_disconnect"
         try:
             while not self.closing:
                 message = await asyncio.wait_for(self.ws.receive(), 25)
                 if message["type"] == "websocket.disconnect":
                     break
                 if message.get("bytes") is not None:
+                    self.received_frames += 1
+                    self.received_bytes += len(message["bytes"])
                     self.rate_count += 1
                     elapsed = time.monotonic() - self.rate_start
                     if elapsed > 2:
                         if self.rate_count / elapsed > 45:
+                            reason = "frame_rate_limit"
                             await self.ws.close(code=1008, reason="Frame rate limit exceeded")
                             break
                         self.rate_start, self.rate_count = (time.monotonic(), 0)
@@ -358,6 +399,7 @@ class StreamSession:
                         await self.send({"type": "phrase_limit"})
                 elif message.get("text"):
                     if len(message["text"]) > 1024:
+                        reason = "oversized_control"
                         break
                     control = json.loads(message["text"])
                     if not isinstance(control, dict):
@@ -402,15 +444,35 @@ class StreamSession:
                             elif self.visual:
                                 await self.finish_turn(self.active_turn, self.last_timestamp)
                             await self.send({"type": "finished"})
+                            reason = "finished"
                             break
-        except (WebSocketDisconnect, asyncio.TimeoutError):
-            pass
+        except WebSocketDisconnect:
+            reason = "peer_disconnect"
+        except asyncio.TimeoutError:
+            reason = "receive_timeout"
+            with contextlib.suppress(Exception):
+                await self.send(
+                    {
+                        "type": "error",
+                        "message": "Camera connection stalled: no frames or heartbeat arrived for 25 seconds. Start reading again.",
+                    }
+                )
         except (ValueError, TypeError, KeyError):
+            reason = "invalid_control"
             with contextlib.suppress(Exception):
                 await self.send(
                     {"type": "error", "message": "Camera message was invalid. Restart the camera."}
                 )
         finally:
+            log.info(
+                "Camera closed session=%s reason=%s frames=%d bytes=%d elapsed=%.3fs last_capture=%.2fs",
+                self.session_id,
+                "task_failed" if self.failure_task else reason,
+                self.received_frames,
+                self.received_bytes,
+                time.monotonic() - self.started_at,
+                self.last_timestamp,
+            )
             self.closing = True
             if self.failure_task:
                 await self.failure_task

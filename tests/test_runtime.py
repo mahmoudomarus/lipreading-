@@ -90,6 +90,29 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([store.get(job["id"])["state"] for job in jobs], ["thinking", "review"])
         self.assertNotIn("interrupted", self.events[0])
 
+    async def test_idle_stream_explains_its_timeout_before_closing(self):
+        async def idle():
+            raise TimeoutError()
+
+        self.session.ws.receive = idle
+        with self.assertLogs("lipread", level="INFO") as captured:
+            await self.session.run()
+        self.assertEqual([event["type"] for event in self.events], ["connected", "error", "closed"])
+        self.assertIn("25 seconds", self.events[1]["message"])
+        self.assertIn("reason=receive_timeout", "\n".join(captured.output))
+        self.assertIn("frames=0", "\n".join(captured.output))
+
+    async def test_turn_diagnostics_do_not_log_transcript_or_access_token(self):
+        text = "a private sentence about groceries"
+        self.session.utterances.add(1, 1, {"text": text, "auto_send": True})
+        with self.assertLogs("lipread", level="INFO") as captured:
+            await self.session.finish_turn(1, 4)
+        output = "\n".join(captured.output)
+        self.assertIn("Camera turn", output)
+        self.assertNotIn(text, output)
+        self.assertNotIn(self.runtime.token, output)
+        self.assertEqual(self.events[0]["text"], text)
+
     async def test_held_part_remains_held_through_final_turn_processing(self):
         self.session.active_turn = 1
         self.session.utterances.add(

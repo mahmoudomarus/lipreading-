@@ -37,6 +37,7 @@ class Runtime:
             self.site_origin = origin_file.read_text().strip()
 
     async def start(self):
+        log.setLevel(logging.INFO)
         self.directory.mkdir(parents=True, exist_ok=True)
         token_file = self.directory / "access-token"
         if not token_file.exists():

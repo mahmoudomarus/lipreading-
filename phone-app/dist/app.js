@@ -46,6 +46,7 @@ let frameCount = 0,
 const finalized = new Set();
 const capturePacer = createFramePacer(25);
 let adaptingVideo = false;
+let streamError = '';
 let visualTurns = false,
   cameraSession = null,
   activeVisualTurn = 0,
@@ -198,7 +199,7 @@ async function checkStatus() {
     $('start').disabled = data.status !== 'ready' || connecting || finishing;
     $('engine-label').textContent =
       data.device === 'mps' ? 'Mac acceleration on' : 'Processed on your computer';
-    if (!running && !finishing && !connecting)
+    if (!running && !finishing && !connecting && !streamError)
       status(
         data.status === 'ready'
           ? 'Face the camera. Speak naturally. Your microphone stays off.'
@@ -297,6 +298,7 @@ async function startCapture() {
     return;
   }
   connecting = true;
+  streamError = '';
   $('start').disabled = true;
   status('Opening your camera…', 'working');
   try {
@@ -364,13 +366,14 @@ async function startCapture() {
     studioCaption = null;
     studioQuality = null;
     socket.onmessage = receive;
-    socket.onclose = () => {
+    socket.onclose = (event) => {
       const unexpected = running || finishing;
       restartAfterStop = false;
       cleanup();
       if (visibilityResume.finished()) return;
       if (unexpected) {
-        status('Connection lost. Tap start to reconnect.', 'error');
+        streamError = streamError || event.reason || 'Connection lost. Tap start to reconnect.';
+        status(streamError, 'error');
         checkStatus();
       }
     };
@@ -593,6 +596,7 @@ function receive(event) {
     if (!data.silent) status(data.message, 'error');
     else status('Listening for your next phrase.');
   } else if (data.type === 'guidance' || data.type === 'error') {
+    if (data.type === 'error' && data.sequence == null) streamError = data.message;
     status(data.message, 'error');
   } else if (data.type === 'ready') {
     $('commit').disabled = !running;

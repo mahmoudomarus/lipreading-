@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Retain camera-stall errors across connection close/readiness updates and log session/decoder metadata without captions or keys. Report receive timeouts before closing.
+
 Print and save a private direct computer link separately from the phone tunnel link, so desktop-camera testing uses loopback.
 
 Resume a user-started camera session when its tab becomes visible again, after the old capture finishes. Keep capture off while hidden, retain explicit Stop behavior and clear stale FPS. Show intentional pause separately from connection failure.
