@@ -167,6 +167,16 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.events[0]["heard"], "I'M HEADING TO TRAITOR JONES")
         self.assertEqual(self.events[0]["alternatives"], [])
 
+    async def test_a_spoken_turn_with_no_words_is_reported_but_false_starts_stay_quiet(self):
+        self.session.utterances.start(1, 2.0)
+        await self.session.finish_turn(1, 5.0)
+        self.assertEqual(self.events[0]["type"], "abstained")
+        self.assertFalse(self.events[0]["silent"])
+        self.assertIn("didn't catch that", self.events[0]["message"])
+        self.session.utterances.start(2, 9.0)
+        await self.session.finish_turn(2, 9.4)
+        self.assertTrue(self.events[1]["silent"])
+
     async def test_newer_turn_does_not_drop_a_finished_reading(self):
         self.session.active_turn = 2
         self.session.utterances.add(1, 1, {"text": "hello there", "auto_send": True})

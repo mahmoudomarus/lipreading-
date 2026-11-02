@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Report speaking turns that yield no words instead of dropping them silently, and stop a flickering face from holding a turn open.
+
 Add saved names and places: reading spans that look like a saved name on the lips are corrected in every mode, the original reading stays visible, and the planner receives the list.
 
 Add Commands mode: finished turns snap to the closest saved phrase using spelling and lip-shape similarity, or are held when no phrase fits clearly. Phrases are edited in Settings and stored locally.

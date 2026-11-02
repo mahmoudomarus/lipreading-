@@ -18,6 +18,7 @@ class LipActivity:
         self.turn = 0
         self.last_motion = 0.0
         self.first_motion = None
+        self.graced = False
 
     def observe(self, shape, timestamp):
         event = None
@@ -34,8 +35,11 @@ class LipActivity:
             }
         if self.previous is None:
             self.previous = tuple(shape)
-            if self.speaking:
-                self.last_motion = timestamp
+            # Regaining the face grants one short grace period per pause; only real movement
+            # renews it, so a face that keeps dropping out cannot hold a turn open forever.
+            if self.speaking and not self.graced:
+                self.last_motion = max(self.last_motion, timestamp - self.pause_seconds / 2)
+                self.graced = True
             movement = 0.0
         else:
             # Exponential smoothing damps per-sample landmark jitter on small or noisy
@@ -57,6 +61,7 @@ class LipActivity:
         # keep a turn open; small or noisy faces otherwise never reach the pause.
         if sum(self.motions) >= 2:
             self.last_motion = timestamp
+            self.graced = False
         if not self.speaking and sum(self.motions) >= 2:
             self.speaking = True
             self.turn += 1

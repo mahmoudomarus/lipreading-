@@ -107,6 +107,21 @@ class TurnTests(unittest.TestCase):
         self.assertIsNone(state.observe([0.08, 1], 7)["event"])
         self.assertTrue(state.speaking)
 
+    def test_a_face_that_keeps_dropping_out_cannot_hold_a_turn_open(self):
+        state = LipActivity()
+        for step, value in enumerate([0, 0.04, 0.08, 0.12]):
+            state.observe([value, 1], step * 0.12)
+        self.assertTrue(state.speaking)
+        stopped = None
+        for step in range(4, 120):
+            # Tracking is lost on every other sample while the mouth is still.
+            shape = None if step % 2 else [0.12, 1]
+            if state.observe(shape, step * 0.12)["event"] == "stopped":
+                stopped = step * 0.12
+                break
+        self.assertIsNotNone(stopped)
+        self.assertLess(stopped, 3)
+
     def test_chunks_are_assembled_once_at_the_end_in_order(self):
         turns = Utterances()
         turns.start(1, 0.2)

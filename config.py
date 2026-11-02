@@ -9,6 +9,8 @@ MIN_CAPTURE_SECONDS = 0.7
 MAX_DECODE_SECONDS = 8.0
 PHRASE_LIMIT_SECONDS = 7.8
 MAX_BUFFER_SECONDS = 9.8
+# A turn at least this long that yields no words is reported to the user, not dropped silently.
+UNREAD_TURN_SECONDS = 1.0
 MAX_BUFFER_FRAMES = 260
 
 

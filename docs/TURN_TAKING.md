@@ -2,7 +2,7 @@
 
 ## Camera conversation
 
-A local face-landmarker checks normalized lip-shape changes at roughly eight samples per second. Shapes are exponentially smoothed so per-sample landmark jitter on small or noisy faces does not register as speech. Two movement observations within three samples start a turn, and only such sustained movement keeps it open; approximately 1.05 seconds without it ends the turn. Tracking loss does not count as a completed phrase. Finish sentence provides a manual fallback.
+A local face-landmarker checks normalized lip-shape changes at roughly eight samples per second. Shapes are exponentially smoothed so per-sample landmark jitter on small or noisy faces does not register as speech. Two movement observations within three samples start a turn, and only such sustained movement keeps it open; approximately 1.05 seconds without it ends the turn. Tracking loss does not count as a completed phrase, but regaining the face grants only one short grace period per pause, so a face that keeps dropping out cannot hold a turn open. A turn of at least one second that yields no words is reported ("I didn't catch that") instead of being dropped silently; shorter false starts stay quiet. Finish sentence provides a manual fallback.
 
 Consumed decoder windows form a single final request. Intermediate chunks remain captions and do not become separate agent jobs. Final turns retain actual draft evidence and bounded alternatives; an uncertain part holds the whole turn for review. Compare readings is available only when at least two distinct supported readings exist. It selects among candidates without rewriting them.
 

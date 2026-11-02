@@ -17,6 +17,7 @@ from config import (
     MIN_CAPTURE_SECONDS,
     PHRASE_LIMIT_SECONDS,
     PROTOCOL_VERSION,
+    UNREAD_TURN_SECONDS,
 )
 from engine import CaptureError, NoSpeech, decode_frame
 from recognition_guard import RecognitionGuard, review_reason
@@ -117,6 +118,7 @@ class StreamSession:
         turn = self.utterances.turns.get(turn_id)
         if turn and turn["sent"]:
             return
+        spoke = bool(turn) and endpoint - turn["start"] >= UNREAD_TURN_SECONDS
         result = self.utterances.finish(turn_id, endpoint)
         if result:
             if self.vocabulary:
@@ -142,8 +144,17 @@ class StreamSession:
             )
             await self.send({**result, "session_id": self.session_id})
         else:
+            # A real speaking turn that produced no words must be reported, not dropped silently;
+            # brief false starts from a moving face stay quiet.
+            log.info("Camera turn session=%s turn=%d unread=%s", self.session_id, turn_id, spoke)
             await self.send(
-                {"type": "abstained", "silent": True, "capture_end": endpoint, "turn_id": turn_id}
+                {
+                    "type": "abstained",
+                    "silent": not spoke,
+                    "message": "I didn't catch that. Move closer and face the camera.",
+                    "capture_end": endpoint,
+                    "turn_id": turn_id,
+                }
             )
 
     def cut(self, timestamp, turn_id):
