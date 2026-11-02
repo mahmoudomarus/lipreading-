@@ -6,7 +6,6 @@
 | --- | --- |
 | Python 3.11 | The development Python version; start with a clean virtual environment |
 | Git | Clone this repository and fetch the pinned Chaplin inference code |
-| FFmpeg + ffprobe | Convert Studio recordings; export tests also exercise these executables |
 | cloudflared | Temporary HTTPS tunnel so your phone can request camera access |
 | Node 22 | Frontend tests only; no Node service or npm install is needed for normal use |
 | Several GB of storage | Approximately 1.25 GB of model assets plus PyTorch and other dependencies |
@@ -16,10 +15,10 @@ The full app was developed on macOS. CPU recognition is the default; Metal accel
 On a Mac with Homebrew installed:
 
 ```sh
-brew install python@3.11 git ffmpeg cloudflared
+brew install python@3.11 git cloudflared
 ```
 
-Use the official [Python](https://www.python.org/downloads/), [PyTorch](https://pytorch.org/get-started/locally/), [FFmpeg](https://ffmpeg.org/download.html), and [Cloudflare](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) installation instructions for your platform. Install a matching `torch`, `torchvision`, and `torchaudio` set if you choose platform-specific PyTorch builds. Development used 2.11.0 / 0.26.0 / 2.11.0; the dependency ranges are not a cross-platform lockfile.
+Use the official [Python](https://www.python.org/downloads/), [PyTorch](https://pytorch.org/get-started/locally/), and [Cloudflare](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) installation instructions for your platform. Install a matching `torch`, `torchvision`, and `torchaudio` set if you choose platform-specific PyTorch builds. Development used 2.11.0 / 0.26.0 / 2.11.0; the dependency ranges are not a cross-platform lockfile.
 
 ## Install
 
@@ -81,11 +80,9 @@ The complete setting table and local/hosted examples are maintained in [README s
 
 Use either the foreground launcher or detached launcher, not both. The manager starts its own server/tunnel and writes PID, logs, and links in `.runtime/`. It does not install a login item, restart on system reboot, or prevent computer sleep. Restarting after changing environment variables loads the new process environment. A server restart marks in-flight model calls failed instead of replaying them; queued jobs resume and pending confirmations remain available.
 
-Agent work can complete while the browser is closed. Timer due times persist and update after reconnecting, but there are no closed-phone push notifications or alarm sounds. Camera capture pauses when the page becomes hidden and resumes on return after its previous capture finishes. Stop reading keeps capture stopped; Studio recording does not restart automatically. iOS does not support the locked/background camera experience this prototype would otherwise need.
+Agent work can complete while the browser is closed. Timer due times persist and update after reconnecting, but there are no closed-phone push notifications or alarm sounds. Camera capture pauses when the page becomes hidden and resumes on return after its previous capture finishes. Stop reading keeps capture stopped. iOS does not support the locked/background camera experience this prototype would otherwise need.
 
-## Studio and a separate frontend
-
-Studio records real camera footage and labeled predictions, agent states/results, and optional generated speech for up to 45 seconds. Live replies also work while recording. Use **Review request** to correct/resend a phrase or confirm a pending action. Review the downloaded clip before sharing it. Settings dialogs, keys, and connection URLs are outside the recorded canvas. Browser recorder and audio behavior still need target-device verification.
+## Separate frontend
 
 The backend serves `phone-app/dist` directly, so separate frontend hosting is optional. To host those static assets elsewhere, set `LIPREAD_SITE_ORIGIN` to its exact origin before launching, then generate a connected link:
 

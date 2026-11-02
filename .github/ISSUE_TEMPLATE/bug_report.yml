@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible setup, camera, agent, or Studio problem.
+description: Report a reproducible setup, camera or agent problem.
 body:
   - type: textarea
     id: problem

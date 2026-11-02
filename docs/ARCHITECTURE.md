@@ -16,7 +16,6 @@
 | Durable jobs, validated tools and receipts | `agent.py` |
 | Cited report and public-link validation | `web_results.py` |
 | Optional generated-caption speech adapter | `speech.py` |
-| Recording conversion | `video_export.py` |
 | Buildless browser application | `phone-app/dist/` |
 
 `create_app(runtime_dir, load_models=...)` creates independent application state. Lifespan startup creates the app token, SQLite store, providers, locks and three single-thread executors. Importing `server` does not create a token, database or worker pools. Tests use temporary runtime directories and `load_models=False` with controlled recognition fixtures. Normal startup loads the pinned assets.
@@ -78,7 +77,6 @@ All API HTTP routes require the app bearer token. Camera authentication occurs i
 | `GET/POST /api/agent/jobs` | Read or submit jobs |
 | `POST /api/agent/jobs/{id}/{confirm,cancel,dismiss}` | Existing review and correction operations |
 | `POST /api/agent/cancel-all` | Cancel all queued, running and review jobs |
-| `POST /api/export` | Bounded MP4 conversion |
 
 
 ## Extend existing components

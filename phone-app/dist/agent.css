@@ -34,7 +34,7 @@ body {
 .page-heading h1 span {
   color: var(--accent);
 }
-.studio-subtitle {
+.hero-subtitle {
   color: #8d9e93;
   font-size: 15px;
 }
@@ -429,25 +429,6 @@ body {
 .connection-state.ready {
   color: #bee0af;
 }
-.studio-launch {
-  border-color: #45613f;
-  color: #cee8bd;
-  background: #19271b;
-}
-.studio-callout {
-  border-color: #2d402f;
-  background: #111b14;
-}
-.studio-callout h2 {
-  color: #e2eddf;
-}
-.studio-callout button {
-  background: #c7f2b2;
-  color: #1d2b19;
-}
-.studio-callout-tag {
-  color: #9cbb8c;
-}
 .settings-dialog {
   background: #111a15;
   color: #e1ecdf;
@@ -563,18 +544,6 @@ select:focus-visible {
   .app-header .connection-state {
     display: none;
   }
-  .studio-controls {
-    flex-wrap: wrap;
-  }
-  .studio-left-controls {
-    flex-wrap: wrap;
-  }
-  .studio-callout {
-    gap: 18px;
-  }
-  .studio-callout h2 {
-    font-size: 26px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .thinking {
@@ -620,7 +589,7 @@ select:focus-visible {
   .viewfinder {
     aspect-ratio: 1.4;
   }
-  .studio-subtitle {
+  .hero-subtitle {
     font-size: 12px;
     max-width: 260px;
     line-height: 1.6;
@@ -827,4 +796,26 @@ select:focus-visible {
 }
 #camera-cancel-all {
   min-width: 64px;
+}
+/* Keep the camera, the Start button and the newest replies within one laptop screen. */
+@media (min-width: 901px) {
+  .page-heading {
+    margin: 16px 0 18px;
+  }
+  .page-heading h1 {
+    font-size: clamp(40px, 3.6vw, 56px);
+  }
+  .viewfinder {
+    width: 100%;
+    max-height: max(300px, calc(100vh - 390px));
+  }
+  .transcript-panel {
+    min-height: 0;
+  }
+  .agent-feed {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 220px;
+    max-height: none;
+  }
 }

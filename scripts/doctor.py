@@ -16,7 +16,7 @@ def check(label, ok, detail=""):
 
 
 check("Python 3.11", sys.version_info[:2] == (3, 11), ".".join(map(str, sys.version_info[:3])))
-for command in ("git", "ffmpeg", "ffprobe", "cloudflared"):
+for command in ("git", "cloudflared"):
     check(command, bool(shutil.which(command)))
 for package in (
     "fastapi",

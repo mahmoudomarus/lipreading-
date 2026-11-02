@@ -26,7 +26,6 @@ from provider import ProviderError
 from runtime import Runtime
 from speech import RealtimeSpeech, SpeechError
 from stream_session import StreamSession
-from video_export import ExportError, export_mp4
 
 ROOT = Path(__file__).resolve().parent
 router = APIRouter()
@@ -235,29 +234,6 @@ async def agent_operation(job_id: str, operation: str, request: Request):
             return await runtime.agent_store.async_db(runtime.agent_store.dismiss, job_id)
         raise ValueError("Unknown operation.")
     except ValueError as exc:
-        raise HTTPException(400, str(exc)) from None
-
-
-@router.post("/api/export")
-async def export_recording(request: Request):
-    runtime = request.app.state.runtime
-    authorize_request(request)
-    if runtime.export_lock.locked():
-        raise HTTPException(429, "An export is already processing.")
-    data = bytearray()
-    async for chunk in request.stream():
-        data.extend(chunk)
-        if len(data) > 40000000:
-            raise HTTPException(413, "Record a shorter clip, up to 45 seconds.")
-    try:
-        async with runtime.export_lock:
-            result = await asyncio.to_thread(export_mp4, bytes(data))
-        return Response(
-            result,
-            media_type="video/mp4",
-            headers={"Content-Disposition": 'attachment; filename="lipread-studio.mp4"'},
-        )
-    except ExportError as exc:
         raise HTTPException(400, str(exc)) from None
 
 

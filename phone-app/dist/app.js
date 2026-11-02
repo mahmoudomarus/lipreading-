@@ -11,7 +11,7 @@ import {
   readingCandidates,
   createVisibilityResume,
 } from './core.js';
-import { createStudio, createAudioEngine } from './studio.js';
+import { createAudioEngine } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const video = $('video');
@@ -50,24 +50,16 @@ let streamError = '';
 let visualTurns = false,
   cameraSession = null,
   activeVisualTurn = 0,
-  turnPhase = '',
   voiceEpoch = 0;
 let providerReady = false,
   providerVoice = false,
-  latestAgent = null,
   voiceBusy = false,
-  studioCaption = null,
-  studioQuality = null,
-  studioLatency = null,
-  stageCaptureTimer;
+  overlayCaption = null;
 const assistBusy = new Set();
 const audio = createAudioEngine();
 const agentUI = createAgentUI({
   requestAPI,
   getLatest: () => entries.at(-1),
-  onState: (job) => {
-    latestAgent = job;
-  },
   onSettings: () => openSettings(),
   onStopAudio: () => {
     voiceEpoch++;
@@ -79,45 +71,7 @@ const agentUI = createAgentUI({
     if (socket?.readyState === WebSocket.OPEN)
       socket.send(JSON.stringify({ type: 'conversation', enabled }));
   },
-  onPhase: (value, text) => {
-    turnPhase = text;
-  },
   onReply: (job) => speakReply(job),
-});
-const studio = createStudio({
-  video,
-  audio,
-  getState: () => ({
-    running,
-    caption: studioCaption,
-    quality: studioQuality,
-    latency: studioLatency,
-    provider: providerVoice,
-    agent: latestAgent,
-    phase:
-      turnPhase ||
-      (voiceBusy
-        ? audio.playing
-          ? 'AI VOICE PLAYBACK'
-          : 'GENERATING AI VOICE'
-        : assistBusy.size
-          ? 'MODEL CONTEXT SELECTION'
-          : ''),
-    canCommit: running && !finishing && !$('commit').disabled,
-  }),
-  ensureCamera: ensureStudioCamera,
-  stopCamera: () => stopCapture(),
-  requestAPI,
-  onCommit: commitSentence,
-  onVoice: () => playEntry(entries.at(-1)),
-  onRecordStart: () => {
-    studioCaption = null;
-  },
-  onVisibility: (visible) => {
-    clearInterval(stageCaptureTimer);
-    if (visible)
-      stageCaptureTimer = setInterval(() => captureFrame(performance.now(), video.currentTime), 20);
-  },
 });
 const visibilityResume = createVisibilityResume({
   hidden: () => document.hidden,
@@ -364,8 +318,7 @@ async function startCapture() {
     lastMediaTime = -1;
     activeDraft = null;
     finalized.clear();
-    studioCaption = null;
-    studioQuality = null;
+    overlayCaption = null;
     socket.onmessage = receive;
     socket.onclose = (event) => {
       const unexpected = running || finishing;
@@ -471,7 +424,7 @@ function updateProgress() {
   if (mode === 'phrase' && (performance.now() - captureStart) / 1000 >= 7.8) stopCapture();
 }
 function setOverlay(text, label) {
-  studioCaption = { text, source: label, at: performance.now(), id: studioCaption?.id };
+  overlayCaption = { text, source: label, at: performance.now(), id: overlayCaption?.id };
   $('overlay-text').textContent = displayText(text);
   $('overlay-label').textContent = label;
   $('caption-overlay').hidden = false;
@@ -510,7 +463,6 @@ function receive(event) {
       setOverlay(data.text, 'YOUR REQUEST');
     if (data.auto_send !== false && providerVoice && $('auto-voice').checked) playEntry(entry);
   } else if (data.type === 'quality') {
-    studioQuality = { ...data, at: performance.now() };
     cameraHint(data.message, data.ok ? 'good' : 'warning');
     $('face-guide').classList.toggle('good', data.ok);
     if (data.box && running) positionGuide(data.box);
@@ -522,8 +474,7 @@ function receive(event) {
     $('draft-phase').textContent = 'Live draft';
     $('draft-text').textContent = displayText(data.text);
     setOverlay(data.text, 'DRAFT · MAY CHANGE');
-    studioCaption.id = sessionId + ':' + data.sequence;
-    studioLatency = data.processing_seconds.toFixed(2);
+    overlayCaption.id = sessionId + ':' + data.sequence;
     $('latency').textContent =
       Math.max(0, (performance.now() - captureStart) / 1000 - data.capture_end).toFixed(2) +
       's last frame → draft';
@@ -549,12 +500,11 @@ function receive(event) {
     }
     if (data.auto_send === false) {
       $('caption-overlay').hidden = true;
-      studioCaption = null;
+      overlayCaption = null;
       cameraHint('Unclear reading · keep speaking or correct it', 'warning');
     } else if (!data.visual_turns || data.turn_id >= activeVisualTurn)
       setOverlay(data.text, data.awaiting_pause ? 'LISTENING · CONTINUE YOUR REQUEST' : 'REFINED');
-    if (studioCaption) studioCaption.id = entry.id;
-    studioLatency = data.processing_seconds.toFixed(2);
+    if (overlayCaption) overlayCaption.id = entry.id;
     if (Number.isFinite(data.capture_end)) segmentStart = captureStart + data.capture_end * 1000;
     $('latency').textContent = data.processing_seconds.toFixed(2) + 's phrase processing';
     status(
@@ -587,7 +537,7 @@ function receive(event) {
       $('draft-card').hidden = true;
     }
     $('caption-overlay').hidden = true;
-    studioCaption = null;
+    overlayCaption = null;
     if (Number.isFinite(data.capture_end)) segmentStart = captureStart + data.capture_end * 1000;
     if (!data.silent) status(data.message, 'error');
     else status('Listening for your next phrase.');
@@ -710,7 +660,6 @@ function compareReference(entry = entries.at(-1)) {
     : 'Enter a sentence containing words to compare.';
 }
 function stopMedia() {
-  studio.onCameraStopped();
   sending = false;
   clearInterval(captureTimer);
   clearInterval(progressTimer);
@@ -803,7 +752,7 @@ $('copy').onclick = async () => {
 };
 $('clear').onclick = () => {
   entries.length = 0;
-  studioCaption = null;
+  overlayCaption = null;
   renderCaptions();
   $('caption-overlay').hidden = true;
   compareReference();
@@ -835,25 +784,8 @@ document.addEventListener('visibilitychange', () => visibilityResume.changed());
 window.addEventListener('pagehide', () => {
   visibilityResume.cancel();
   clearTimeout(pollTimer);
-  clearInterval(stageCaptureTimer);
-  studio.dispose();
   cleanup();
 });
-
-async function ensureStudioCamera() {
-  if (mode === 'phrase' && running) {
-    stopCapture();
-    const until = performance.now() + 20000;
-    while (finishing && performance.now() < until)
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    if (finishing) return false;
-  }
-  if (!running) {
-    chooseMode('live');
-    await startCapture();
-  }
-  return running;
-}
 
 async function requestAPI(path, { body, method = 'POST', raw = false, timeout = 22000 } = {}) {
   if (!connection?.key) throw new Error('Open your private connected app link first.');
@@ -1000,9 +932,9 @@ async function assistEntry(entry, automatic = false) {
     if (!candidates.includes(selection.text))
       throw new Error('The AI selection did not match a visual reading.');
     entry.assist = selection;
-    if (studioCaption?.id === entry.id) {
+    if (overlayCaption?.id === entry.id) {
       setOverlay(selection.text, 'MODEL SELECTED · UNVERIFIED');
-      studioCaption.id = entry.id;
+      overlayCaption.id = entry.id;
     }
     providerMessage('Model selected an existing visual reading. It has not verified the words.');
     if (automatic && $('auto-voice').checked && entries.at(-1) === entry) playEntry(entry);
@@ -1030,7 +962,7 @@ async function playEntry(entry) {
     if (epoch !== voiceEpoch) return;
     if (!entries.includes(entry)) return;
     setOverlay(text, entry.assist ? 'AI VOICE · AI-SELECTED TEXT' : 'AI VOICE · PREDICTED TEXT');
-    studioCaption.id = entry.id;
+    overlayCaption.id = entry.id;
     providerMessage('Playing AI-generated speech. No microphone input.');
     await audio.play(bytes);
     providerMessage('AI voice finished.');
@@ -1071,5 +1003,3 @@ async function speakReply(job) {
 $('voice-latest').onclick = () => playEntry(entries.at(-1));
 refreshModelControls();
 checkStatus();
-$('studio-agent').onclick = () => agentUI.review(entries.at(-1), true);
-if (new URLSearchParams(location.search).has('studio')) studio.enter();

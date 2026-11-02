@@ -51,7 +51,7 @@ test('agent UI has complete bindings and neutral user-facing source', async () =
   const js = await readFile(new URL('../dist/agent-ui.js', import.meta.url), 'utf8');
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
   for (const m of js.matchAll(/\$\('([^']+)'\)/g)) assert.ok(ids.includes(m[1]), m[1]);
-  for (const file of ['index.html', 'app.js', 'studio.js', 'studio-core.js', 'core.js']) {
+  for (const file of ['index.html', 'app.js', 'audio.js', 'core.js']) {
     assert.doesNotMatch(
       await readFile(new URL('../dist/' + file, import.meta.url), 'utf8'),
       /openai/i,

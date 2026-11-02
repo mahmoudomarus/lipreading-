@@ -34,7 +34,7 @@ flowchart TD
 | [Lip-activity turn detection](turn_taking.py), pause handling and chunk assembly with alternatives | MediaPipe face detector and landmark task |
 | [Abstention and blocking review guards](recognition_guard.py) | Existing model predictions and draft evidence; no additional model |
 | [Durable job store](agent.py), bounded concurrency, cancellation, UUID deduplication and confirmation | SQLite and replaceable text-model APIs |
-| [Phone interface and Studio](phone-app/dist/), correction controls, work cards and recording/export | Browser media APIs and FFmpeg |
+| [Phone interface](phone-app/dist/), correction controls, work cards and spoken replies | Browser camera and Web Audio APIs |
 
 Recognition models were not trained for this project. Exact upstream revisions, assets, hashes and separate license terms are in [model provenance](docs/MODELS.md).
 
@@ -62,7 +62,6 @@ Lipread Lab turns a phone camera into an experimental input for an assistant. Mo
 | --- | --- |
 | macOS, Python 3.11 | Full development target; Linux runs lightweight CI tests; Windows is unvalidated |
 | Git | Source and pinned inference checkout |
-| FFmpeg and ffprobe | Studio export and conversion tests |
 | cloudflared | Temporary HTTPS phone connection |
 | Node 22 | Tests/formatting only; normal use needs no Node service |
 | Several GB free | 1,220,980,675 bytes of assets plus Python/PyTorch dependencies |
@@ -70,7 +69,7 @@ Lipread Lab turns a phone camera into an experimental input for an assistant. Mo
 On macOS with Homebrew:
 
 ```sh
-brew install python@3.11 git ffmpeg cloudflared
+brew install python@3.11 git cloudflared
 # Only for frontend development:
 brew install node@22
 ```
@@ -122,7 +121,7 @@ A tunnel restart changes its origin: reopen the newest link. Detached operation 
 2. Allow camera access, face the lens in good light and start the conversation. No microphone permission is requested.
 3. Use **Live** for growing drafts and pause-based turn completion. Use **Phrase** for a short deliberate capture with detailed decoding. **Finish sentence** completes a missed pause manually.
 4. Keep your face frontal and lips large enough in the picture. Framing hints report light, distance, head angle and delivery problems; they are advice rather than transcript confidence.
-5. Keep the page visible while speaking. Hiding the tab pauses capture; returning resumes it after the previous capture finishes. Press Stop reading to stop it until you choose Start again. Computer tasks continue independently. Studio recordings stop on hide and need a new Record action.
+5. Keep the page visible while speaking. Hiding the tab pauses capture; returning resumes it after the previous capture finishes. Press Stop reading to stop it until you choose Start again. Computer tasks continue independently.
 
 The link fragment carries the app access key, which is distinct from a provider key. The browser strips connection fragments and retains the connection in session storage. A static preview alone cannot run recognition.
 
@@ -183,8 +182,6 @@ The included research adapter requires the supported hosted Responses endpoint. 
 
 With **Live replies** enabled, eligible finalized turns are submitted automatically. Drafts never submit. Switch it off to review, edit and send manually. An inherited chunk hold stays blocking through final turn assembly; it can hold a correct reading too. Correct the text or repeat the phrase, then explicitly review/send it.
 
-**Speak replies** (on by default when the model connection supports speech) reads each new assistant reply aloud with generated speech, up to the first 360 characters in whole sentences. Replies loaded from history when the page opens are not spoken. Moving your lips stops playback; it never cancels tasks.
-
 **Compare readings** chooses among existing candidates when at least two supported alternatives exist. Selection changes the caption display only; explicitly review/send that selection to create a request with those exact words. It does not revise an existing task. **Cancel and edit** cancels a selected active task, opens its text for editing, and sends the replacement under a new UUID. Old confirmations cannot execute cancelled details. **Misread · ignore** excludes a finished mistaken request from future context; cancel active work first. Completed receipts remain truthful. Typed requests use the same planner and tools and help separate tool problems from recognition errors.
 
 | Tool | Behavior |
@@ -208,11 +205,9 @@ Speaking never cancels tasks or pending confirmations. It stops generated audio 
 
 Tasks survive closing the browser while the computer service remains running. On service restart, queued tasks resume, pending confirmations remain, and in-flight calls become failed for explicit retry. Each task sees up to four completed earlier tasks as context without waiting for siblings still running. Concurrency means jobs within one server, not multiple server workers.
 
-## 9. Studio
+## 9. Spoken replies
 
-Studio is not linked from the main page. Open it by adding `?studio` to the app address, choose 9:16 or 16:9, then **Record clip**. Recording captures up to 45 seconds of the real camera canvas with labeled predictions and agent state/results. You can review requests while recording. Optional generated voice is mixed in only when played; microphone audio is never added.
-
-Stop recording and download the MP4. Server conversion uses FFmpeg; if conversion fails, the original supported browser format remains downloadable, often WebM. Browser recorder support varies. Play back the file before sharing. Settings dialogs, keys and connection URLs are outside the recorded canvas; visible captions and task details are personal data.
+**Speak replies** (on by default when the model connection supports speech) reads each new assistant reply aloud with generated speech, up to the first 360 characters in whole sentences. Replies loaded from history when the page opens are not spoken. Moving your lips stops playback; it never cancels tasks. Switch it off in the conversation panel to read replies only. **Play latest caption with AI voice** in Settings reads your own predicted caption aloud instead, for speaking to someone nearby.
 
 ## 10. Measuring accuracy
 
@@ -258,7 +253,7 @@ There is currently no redistributable, consent-verified public face-video fixtur
 
 ## 11. Development and tests
 
-The lightweight suite requires no weights, camera or provider account. Install FFmpeg for conversion tests:
+The lightweight suite requires no weights, camera or provider account:
 
 ```sh
 python3.11 -m venv .venv-test
@@ -286,7 +281,6 @@ CI runs these checks on Python 3.11 and Node 22 on Linux. Tests isolate runtime 
 | `scripts/eval_metrics.py` | Imported metric/report helpers; no standalone CLI |
 | `scripts/check_agent.py` | Actual planner/tool checks in an isolated temporary database |
 | `scripts/check_harness_http.py` | Actual HTTP calculator request, removing only its own test job; same checkout/store as service |
-| `scripts/check_studio.py` | Authenticated status and optional supplied synthetic-video conversion |
 | `scripts/check_speech.py` | Explicit text-only speech sample saved as `.runtime/voice-test.wav` |
 | `scripts/benchmark.py` | Device/window microprofile; not accuracy measurement |
 | `scripts/profile_cache.py` | Compare detection-cache work on a supplied clip |
@@ -298,7 +292,6 @@ Examples on a development service:
 .venv/bin/python scripts/smoke_video.py path/to/consented-clip.mp4 --mode live
 .venv/bin/python scripts/check_agent.py
 .venv/bin/python scripts/check_harness_http.py http://127.0.0.1:8765
-.venv/bin/python scripts/check_studio.py --fixture path/to/synthetic.webm
 .venv/bin/python scripts/check_speech.py
 .venv/bin/python scripts/profile_cache.py path/to/consented-clip.mp4
 .venv/bin/python scripts/benchmark.py path/to/consented-clip.mp4
@@ -316,19 +309,18 @@ Smoke/timing/evaluation accept `--server`, `--token-file` and `--report` for iso
 | Testing on the computer feels delayed through the phone link | Open `.runtime/computer-url` to use the direct local connection |
 | Access denied | Use this installation's app key, not a provider API key |
 | Camera permission missing | Allow camera on the HTTPS page and keep it visible |
-| Camera pauses when switching tabs | Return to the demo tab to resume capture; Stop reading disables automatic resume. Studio recording must be restarted explicitly |
+| Camera pauses when switching tabs | Return to the demo tab to resume capture; Stop reading disables automatic resume |
 | Port 8765 occupied | Stop the existing project launcher before starting another |
 | Torch import failure | Install matching torch/vision/audio builds for Python 3.11 |
 | Asset or vendor mismatch | Preserve edits; verify hashes and use asset repair deliberately |
 | Caption inaccurate or delayed | Improve framing, shorten the phrase, finish manually, then evaluate labeled clips |
 | Provider request rejected | Check protocol, endpoint, model, quota and explicit key for that endpoint |
-| Export fails | Check FFmpeg and clip limits; download the original browser recording |
 
 [More troubleshooting](docs/TROUBLESHOOTING.md). Include sanitized versions and a minimal reproduction in issues; exclude private URLs, keys, footage and databases.
 
 ## 13. Privacy and security
 
-Camera-only means recognition receives no microphone input. Frames cross the HTTPS tunnel to the computer, where recognition and transient buffers use RAM. The tunnel relays those frames. Explicit Studio recordings live in browser memory until downloaded; conversion uses temporary files removed afterward. Evaluation retains the source clips/reports you choose to save.
+Camera-only means recognition receives no microphone input. Frames cross the HTTPS tunnel to the computer, where recognition and transient buffers use RAM. The tunnel relays those frames. Camera video is never recorded or saved. Evaluation retains the source clips/reports you choose to save.
 
 | Data | Destination and retention |
 | --- | --- |
@@ -376,8 +368,8 @@ flowchart TD
 | `stream_session.py`, `stream_buffer.py` | Camera scheduling and bounded consume-once frames |
 | `engine.py`, `turn_taking.py`, `recognition_guard.py` | Recognition, visual endpoints, assembly and existing heuristics |
 | `provider.py`, `agent.py`, `web_results.py` | Provider protocols, durable jobs/tools, cited report validation |
-| `speech.py`, `video_export.py` | Optional caption speech and recording conversion |
-| `phone-app/dist/` | Buildless camera, review, work-card and Studio interface |
+| `speech.py` | Optional generated speech for replies and captions |
+| `phone-app/dist/` | Buildless camera, review, work-card and spoken-reply interface |
 
 Imports do not create runtime files; application lifespan owns initialization. SQLite calls from async routes/tasks run off the event loop. Terminal guards reject late cancellation results, and local writes/receipts commit together. [Full route and state reference](docs/ARCHITECTURE.md).
 

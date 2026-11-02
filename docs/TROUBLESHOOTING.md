@@ -3,7 +3,7 @@
 | Symptom | Check or next step |
 | --- | --- |
 | Camera button stays disabled | Wait for model startup; run `scripts/doctor.py`; inspect `.runtime/server.log` locally |
-| `cloudflared`, `ffmpeg` or `ffprobe` not found | Install that executable and make it available on the launcher's PATH |
+| `cloudflared` not found | Install that executable and make it available on the launcher's PATH |
 | Desktop camera uses the phone tunnel | Open the private computer link in `.runtime/computer-url` for a direct loopback connection |
 | Phone cannot connect | Keep the computer awake; reopen the newest printed HTTPS link; old tunnel origins stop working after restart |
 | Access denied | Use the app connection key/link from this installation, not a provider API key |
@@ -21,8 +21,7 @@
 | Agent plan fails validation | The model did not follow the bounded schema; use a more capable compatible model or add a tested adapter, without bypassing validation |
 | Note/timer not created | Open the pending action and confirm it. A proposal is not execution |
 | Timer has no phone alarm | Only persisted due times/countdowns are implemented; push notifications are not |
-| Camera pauses on background/lock | Capture requires a visible page. Return to resume after the old capture finishes; Stop reading keeps it stopped. Computer jobs continue and Studio needs a new recording action |
-| MP4 export fails | Check FFmpeg availability and clip length/size. The original browser recording remains available; verify on the target phone |
+| Camera pauses on background/lock | Capture requires a visible page. Return to resume after the old capture finishes; Stop reading keeps it stopped. Computer jobs continue |
 | Background service not running after reboot/sleep | It is a detached process, not a login service, and it does not prevent sleep. Start it again and use the new link |
 
 Before opening an issue, include OS, Python/library versions, phone/browser, the command used and a minimal reproduction. Remove access tokens, API keys, private URLs, transcripts, database files and personal footage from any diagnostic material you share.

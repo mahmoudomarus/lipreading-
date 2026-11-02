@@ -11,7 +11,7 @@ python3.11 -m venv .venv
 node --test phone-app/tests/*.test.mjs
 ```
 
-Install FFmpeg first; conversion tests use synthetic recordings. Node 22 is the CI baseline. The tests require no GPU, camera, provider account, vendor checkout or model weights. Formatting requires `npm ci` in `phone-app` and the development requirements. `.github/workflows/checks.yml` runs these checks. Real integration checks are intentionally not part of CI: they need credentials/hardware and can incur charges.
+Node 22 is the CI baseline. The tests require no GPU, camera, provider account, vendor checkout or model weights. Formatting requires `npm ci` in `phone-app` and the development requirements. `.github/workflows/checks.yml` runs these checks. Real integration checks are intentionally not part of CI: they need credentials/hardware and can incur charges.
 
 The frontend is maintained directly in `phone-app/dist`. Serve through `server.py` for the real authenticated app. A static server can preview markup but cannot perform recognition or agent actions. Localhost camera permissions and phone HTTPS access are different environments.
 
@@ -26,8 +26,6 @@ With the full installation and running service:
 .venv/bin/python scripts/check_harness_http.py http://127.0.0.1:8765
 # Optional separate frontend origin:
 .venv/bin/python scripts/check_harness_http.py https://your-tunnel.example --site-origin https://your-frontend.example
-# Studio status and optional bounded synthetic video conversion:
-.venv/bin/python scripts/check_studio.py --fixture path/to/synthetic.webm
 # Actual camera protocol, ignoring any audio track in the supplied clip:
 .venv/bin/python scripts/smoke_video.py path/to/consented-clip.mp4 --mode live
 # Held-out references remain in this evaluator, never in recognizer requests:
@@ -41,7 +39,7 @@ The HTTP harness script assumes it runs from the same checkout/data store as the
 
 ## Manual device checks
 
-Verify camera permission success/denial, front/rear switching, orientation changes, hidden-page capture stop, reconnect, caption replacement, automatic replies, switching Live replies off, duplicate-final deduplication, editing a request, pending action cancellation, repeated confirmation, reconnect after a completed job, timer elapsed state, Studio aspect ratio/recording/conversion, and optional speech mixing. Check that recorded media includes provenance labels and no settings/connection data. Record the device/browser and which checks passed.
+Verify camera permission success/denial, front/rear switching, orientation changes, hidden-page capture stop, reconnect, caption replacement, automatic replies, switching Live replies off, duplicate-final deduplication, editing a request, pending action cancellation, repeated confirmation, reconnect after a completed job, timer elapsed state, spoken replies stopping when lips move, and Speak replies off. Record the device/browser and which checks passed.
 
 ## Release preparation
 

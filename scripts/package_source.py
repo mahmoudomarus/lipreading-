@@ -33,7 +33,6 @@ FILES = [
     "provider.py",
     "agent.py",
     "speech.py",
-    "video_export.py",
     "phone-app/package.json",
     "phone-app/package-lock.json",
     "phone-app/.prettierrc.json",

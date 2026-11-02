@@ -50,7 +50,6 @@ class Runtime:
         self.mouth_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lip-activity")
         self.inference_lock = asyncio.Lock()
         self.session_lock = asyncio.Lock()
-        self.export_lock = asyncio.Lock()
         self.voice_lock = asyncio.Lock()
         self.provider = TextProvider()
         self.agent_store = await asyncio.to_thread(AgentStore, self.directory / "agent.sqlite3")

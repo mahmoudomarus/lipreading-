@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Remove the recording studio, MP4 export route and FFmpeg dependency. Speak each new assistant reply aloud behind a Speak replies switch; lip movement stops playback without cancelling tasks. Smooth lip shapes and require sustained movement so turns end on small or noisy faces.
+
 Update the camera send-rate display on a timer so stalled delivery reports zero instead of retaining a stale FPS value.
 
 Retain camera-stall errors across connection close/readiness updates and log session/decoder metadata without captions or keys. Report receive timeouts before closing.

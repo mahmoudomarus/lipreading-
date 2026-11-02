@@ -7,12 +7,12 @@
     <meta name="referrer" content="no-referrer" />
     <meta
       name="description"
-      content="A camera-only lip-reading experiment. Live captions, optional AI voice, and a studio for recording your demo."
+      content="A camera-only lip-reading assistant. Live captions, spoken replies, and background tasks."
     />
     <title>Lipread Lab | Camera captions and assistant</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="style.css" />
-    <link rel="stylesheet" href="studio.css" />
+    <link rel="stylesheet" href="layout.css" />
     <link rel="stylesheet" href="agent.css" />
     <script type="module" src="app.js"></script>
   </head>
@@ -57,7 +57,6 @@
         >
         <div class="header-actions">
           <span class="connection-state" id="connection-state">Connecting</span
-          ><button id="studio-open" class="studio-launch" hidden>Open studio <span>↗</span></button
           ><button
             class="icon-button settings-button"
             id="settings-button"
@@ -72,7 +71,7 @@
           <div>
             <p class="eyebrow">SILENT INPUT. REAL INTENT.</p>
             <h1>Say less. Do more<span>.</span></h1>
-            <p class="studio-subtitle">Your camera is the input. Your agent takes it from here.</p>
+            <p class="hero-subtitle">Your camera is the input. Your agent takes it from here.</p>
           </div>
           <span class="language-pill"
             ><span class="language-dot"></span>English<span class="language-code">EN</span></span
@@ -319,21 +318,9 @@
             </div>
           </section>
         </div>
-        <div class="studio-callout" hidden>
-          <div>
-            <span class="studio-callout-tag">MADE TO BE SHOWN</span>
-            <h2>A silent request. A visible result.</h2>
-            <p>
-              Record your real camera, predicted words, and agent response in a clean 45-second
-              clip.
-            </p>
-          </div>
-          <button id="studio-open-bottom">Make a clip <span>↗</span></button>
-        </div>
         <div class="bottom-note">
           <span class="privacy-mark"
-            ><svg><use href="#check-icon" /></svg>Camera-only input. Video is saved only when you
-            choose to record.</span
+            ><svg><use href="#check-icon" /></svg>Camera-only input. Video is never saved.</span
           ><button class="accuracy-link" id="accuracy-button">
             Check my accuracy<span>↗</span>
           </button>
@@ -344,23 +331,19 @@
             A specialist visual speech model reads camera frames. An offline model repeatedly
             processes a growing window to produce drafts; this is not a fully streaming recognizer.
             Pauses, the sentence button, or an eight-second limit trigger a fuller decoder pass. A
-            pause is estimated and can be misdetected. The studio overlay tracks four actual face
-            landmarks; it is not a phoneme or confidence visualization.
+            pause is estimated and can be misdetected.
           </p>
           <p>
             Silent lip reading is ambiguous and cannot guarantee exact words. Optional context
             assistance selects among the visual model’s existing readings. It does not verify the
-            words. Optional AI voice reads a predicted caption using generated speech. Only caption
-            text is sent to your model when those features are used; camera frames stay on your
-            computer. API usage is billed to the connected key.
+            words. Optional AI voice reads replies or a predicted caption using generated speech.
+            Only caption text is sent to your model when those features are used; camera frames stay
+            on your computer. API usage is billed to the connected key.
           </p>
           <p>
             Reviewed agent requests and tool receipts are saved locally in a private database. They
-            can be cleared from the computer. Camera video stays in memory unless you press Record
-            in Studio. Studio recordings contain the camera, caption provenance labels, and optional
-            generated voice; they never contain microphone input. MP4 conversion uses temporary
-            files on your computer that are deleted after conversion. Cloudflare relays the
-            connection.
+            can be cleared from the computer. Camera video stays in memory and is never recorded.
+            Cloudflare relays the connection.
           </p>
           <p>
             <a href="https://github.com/mpc001/auto_avsr" target="_blank" rel="noreferrer"
@@ -500,51 +483,5 @@
         ><button id="agent-modal-send" type="submit">Send request ↗</button>
       </form>
     </dialog>
-    <section id="studio" class="studio" hidden aria-label="Lipread recording studio">
-      <div class="studio-topbar">
-        <a class="brand" href="#">lipread<span class="version">LAB</span></a
-        ><span class="studio-top-note">A real camera. Predicted words. Zero microphone input.</span
-        ><button id="studio-close" class="icon-button" aria-label="Exit studio">
-          <svg><use href="#close-icon" /></svg>
-        </button>
-      </div>
-      <div class="studio-stage-wrap">
-        <canvas
-          id="studio-canvas"
-          width="1280"
-          height="720"
-          aria-label="Live camera stage with predicted captions"
-        ></canvas>
-        <div id="studio-countdown" class="studio-countdown" hidden></div>
-      </div>
-      <div class="studio-controls">
-        <div class="studio-left-controls">
-          <button id="studio-camera">Start camera</button
-          ><button id="studio-commit" disabled>Finish sentence</button
-          ><button id="studio-aspect" aria-label="Change recording aspect ratio">
-            16:9 <span>↔</span></button
-          ><button id="studio-agent">Review request ↗</button
-          ><button id="studio-voice" disabled>AI voice ↗</button>
-        </div>
-        <button id="studio-record" class="studio-record">
-          <span></span><span id="studio-record-label">Record clip</span>
-        </button>
-      </div>
-      <p id="studio-status" role="status">
-        Open the camera, speak naturally, and record a clip up to 45 seconds.
-      </p>
-      <div id="studio-export" class="studio-export" hidden>
-        <div>
-          <strong id="export-title">Your clip is ready.</strong>
-          <p id="export-note">Camera footage and predicted captions. No microphone.</p>
-        </div>
-        <a id="studio-download" download="lipread-studio.mp4">Download MP4 ↧</a
-        ><button id="studio-copy-post">Copy post text ↗</button>
-      </div>
-      <div class="studio-footnote">
-        Experimental visual speech recognition · Drafts and AI-assisted readings are labeled in the
-        recording.
-      </div>
-    </section>
   </body>
 </html>

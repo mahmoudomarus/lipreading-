@@ -12,7 +12,7 @@ import {
 export function createAgentUI({
   requestAPI,
   getLatest,
-  onState,
+  onState = () => {},
   onSettings,
   onStopAudio = () => {},
   onReply = () => {},
@@ -267,9 +267,14 @@ export function createAgentUI({
       button.disabled = false;
     }
   }
+  // Show the newest turn on open and as replies arrive, until the user scrolls up to read.
+  let followLatest = true;
+  $('agent-feed').addEventListener('scroll', () => {
+    const feed = $('agent-feed');
+    followLatest = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+  });
   function render() {
-    const feed = $('agent-feed'),
-      nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+    const feed = $('agent-feed');
     const nextSignature = JSON.stringify(jobs);
     if (signature === nextSignature) return;
     signature = nextSignature;
@@ -393,7 +398,7 @@ export function createAgentUI({
       turn.append(answer);
       feed.append(turn);
     }
-    if (nearBottom) feed.scrollTop = feed.scrollHeight;
+    if (followLatest) feed.scrollTop = feed.scrollHeight;
   }
   function renderTimers() {
     $('agent-timers').hidden = !timers.length;

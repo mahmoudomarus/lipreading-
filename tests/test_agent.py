@@ -308,7 +308,6 @@ class EndpointTests(RuntimeTestCase):
             ("POST", "/api/agent/jobs/x/confirm"),
             ("POST", "/api/agent/jobs/x/cancel"),
             ("POST", "/api/agent/cancel-all"),
-            ("POST", "/api/export"),
             ("GET", "/api/provider/config"),
             ("POST", "/api/provider/config"),
             ("DELETE", "/api/provider/config"),
