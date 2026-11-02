@@ -1,5 +1,53 @@
 # Lipread Lab
 
+Mouth an English request into your phone camera. Lipread Lab streams video to your computer, detects visual turns, produces draft and final captions, and runs background tasks with cancellation and confirmed local writes. Recognition runs locally on the computer. The language model receives finished text only; it never sees the camera feed.
+
+Demo recording is pending capture and privacy review.
+
+```mermaid
+flowchart TD
+    Phone[Phone camera / microphone off] --> JPEG[Authenticated timestamped JPEG stream]
+    JPEG --> Frames[Bounded video buffer]
+    Frames --> Face[Face detections and aligned mouth crops]
+    Frames --> Lips[Lip landmarks and visual turn detection]
+    Face --> Encoder[Auto-AVSR visual encoder]
+    Encoder --> CTC[Provisional CTC drafts]
+    Encoder --> Beam[Beam search with trained decoder LM]
+    CTC --> Draft[Provisional on-screen captions]
+    CTC -. draft evidence .-> Turns
+    Beam --> Turns[Utterance assembly and alternatives]
+    Lips --> Turns
+    Turns --> Guard[Abstention and review holds]
+    Guard --> Review[Eligible final text or explicit correction]
+    Review --> Queue[Durable task queue / bounded concurrent workers]
+    Queue --> Model[Text model]
+    Model --> Validate[Validate plan / confirm note and timer details]
+    Validate --> Tools[Local tools and persisted receipts]
+```
+
+## What is original here
+
+| Original implementation | Upstream component reused |
+| --- | --- |
+| [Camera protocol](server.py), timestamp validation, backpressure and bounded buffers | Browser camera/JPEG and WebSocket APIs |
+| [Windowed draft/refine scheduling](stream_session.py) and [recognizer adapter](engine.py) | Chaplin/Auto-AVSR encoder, CTC/attention decoding and pretrained weights |
+| [Lip-activity turn detection](turn_taking.py), pause handling and chunk assembly with alternatives | MediaPipe face detector and landmark task |
+| [Abstention and blocking review guards](recognition_guard.py) | Existing model predictions and draft evidence; no additional model |
+| [Durable job store](agent.py), bounded concurrency, cancellation, UUID deduplication and confirmation | SQLite and replaceable text-model APIs |
+| [Phone interface and Studio](phone-app/dist/), correction controls, work cards and recording/export | Browser media APIs and FFmpeg |
+
+Recognition models were not trained for this project. Exact upstream revisions, assets, hashes and separate license terms are in [model provenance](docs/MODELS.md).
+
+## Measured results
+
+| Measure | Current evidence |
+| --- | --- |
+| First draft, median | **2.23 s** from replay start |
+| Final turn, median | **5.68 s** from replay start; **2.72 s** after the last supplied frame |
+| Recognition accuracy | Not measured; consented labeled recordings are pending |
+
+These existing timings are an **unpaired localhost diagnostic**: one reused clip, ten measured runs after warmup, Apple M1 / 8 GiB, CPU / four threads, explicit Finish at EOF. They exclude phone/network delay and agent replies. The paired old/new rerun is pending; no speed improvement is claimed. [Raw timings, exact environment and evidence limits](docs/BASELINE.md).
+
 ## 1. What it is
 
 Lipread Lab turns a phone camera into an experimental input for an assistant. Mouth an English request, pause, and see predicted words and a reply. The computer runs visual recognition; a replaceable text model answers questions or proposes bounded tools. The microphone stays off.
