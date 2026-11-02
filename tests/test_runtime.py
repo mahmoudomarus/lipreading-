@@ -150,6 +150,23 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.events[1]["auto_send"])
         self.assertIn("did not match", self.events[1]["review_reason"])
 
+    async def test_saved_names_correct_a_reading_and_keep_what_was_read(self):
+        self.runtime.agent_store.save_vocabulary(["Trader Joe's"])
+        self.session.vocabulary = await self.session.load_vocabulary()
+        self.session.utterances.add(
+            1,
+            1,
+            {
+                "text": "I'M HEADING TO TRAITOR JONES",
+                "alternatives": ["I'M HEADING TO DRAKE JONES"],
+                "auto_send": True,
+            },
+        )
+        await self.session.finish_turn(1, 4)
+        self.assertEqual(self.events[0]["text"], "I'M HEADING TO Trader Joe's")
+        self.assertEqual(self.events[0]["heard"], "I'M HEADING TO TRAITOR JONES")
+        self.assertEqual(self.events[0]["alternatives"], [])
+
     async def test_newer_turn_does_not_drop_a_finished_reading(self):
         self.session.active_turn = 2
         self.session.utterances.add(1, 1, {"text": "hello there", "auto_send": True})

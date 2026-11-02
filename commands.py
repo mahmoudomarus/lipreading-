@@ -105,3 +105,39 @@ def clean_phrases(phrases):
         if words(phrase) and phrase.lower() not in {k.lower() for k in kept}:
             kept.append(phrase)
     return kept
+
+
+def correct_terms(text, terms, threshold=0.75):
+    """Replace word spans that look like one of the user's names or places on the lips.
+
+    Returns the corrected text and the list of (heard span, term) replacements.
+    """
+    tokens = (text or "").split()
+    candidates = []
+    for term in terms:
+        size = len(words(term))
+        letters = len("".join(words(term)))
+        # One-word names collide with short common words, so they need a closer fit.
+        needed = max(threshold, 0.85) if size == 1 else threshold
+        for width in {max(1, size - 1), size, size + 1}:
+            for start in range(0, len(tokens) - width + 1):
+                span = " ".join(tokens[start : start + width])
+                if not 0.6 * letters <= len("".join(words(span))) <= 1.6 * letters:
+                    continue
+                score = similarity(span, term)
+                if score >= needed and words(span) != words(term):
+                    candidates.append((score, start, width, term))
+    replaced, used = [], set()
+    for _score, start, width, term in sorted(candidates, reverse=True):
+        positions = set(range(start, start + width))
+        if positions & used:
+            continue
+        used |= positions
+        replaced.append((start, width, term))
+    if not replaced:
+        return text, []
+    changes = []
+    for start, width, term in sorted(replaced, reverse=True):
+        changes.append((" ".join(tokens[start : start + width]), term))
+        tokens[start : start + width] = [term]
+    return " ".join(tokens), changes[::-1]

@@ -600,9 +600,11 @@ function renderCaptions() {
     tag.textContent =
       entry.auto_send === false
         ? 'Unclear · not sent'
-        : entry.heard
+        : entry.command_score != null
           ? 'Matched your phrase'
-          : 'Refined phrase';
+          : entry.heard
+            ? 'Corrected a saved name'
+            : 'Refined phrase';
     const time = document.createElement('time');
     time.textContent = entry.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     meta.append(tag, time);
@@ -786,7 +788,31 @@ $('details-toggle').onclick = () => {
 function openSettings() {
   $('settings-dialog').showModal();
   loadPhrases();
+  loadVocabulary();
 }
+async function loadVocabulary() {
+  try {
+    const response = await requestAPI('/api/vocabulary', { method: 'GET' });
+    $('vocabulary-text').value = (await response.json()).terms.join('\n');
+    $('vocabulary-message').textContent = '';
+  } catch (error) {
+    $('vocabulary-message').textContent = error.message;
+  }
+}
+$('vocabulary-save').onclick = async () => {
+  try {
+    const terms = $('vocabulary-text').value.split('\n');
+    const response = await requestAPI('/api/vocabulary', { body: { terms } });
+    const saved = (await response.json()).terms;
+    $('vocabulary-text').value = saved.join('\n');
+    $('vocabulary-message').textContent =
+      saved.length + (saved.length === 1 ? ' name saved.' : ' names saved.');
+    // A running camera session picks up the new names without restarting.
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'vocabulary' }));
+  } catch (error) {
+    $('vocabulary-message').textContent = error.message;
+  }
+};
 async function loadPhrases() {
   try {
     const response = await requestAPI('/api/phrases', { method: 'GET' });

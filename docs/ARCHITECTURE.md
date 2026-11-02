@@ -11,7 +11,7 @@
 | Shared backend protocol and timing constants | `config.py` |
 | Visual encoder, CTC, beam decoding and framing feedback | `engine.py` |
 | Lip activity and utterance assembly | `turn_taking.py` |
-| Commands mode phrase matching | `commands.py` |
+| Commands mode phrase matching and saved-name correction | `commands.py` |
 | Existing abstention and repetition heuristics | `recognition_guard.py` |
 | Structured text provider adapter | `provider.py` |
 | Durable jobs, validated tools and receipts | `agent.py` |
@@ -79,6 +79,7 @@ All API HTTP routes require the app bearer token. Camera authentication occurs i
 | `POST /api/agent/jobs/{id}/{confirm,cancel,dismiss}` | Existing review and correction operations |
 | `POST /api/agent/cancel-all` | Cancel all queued, running and review jobs |
 | `GET /api/phrases`, `POST /api/phrases` | Read or replace the Commands mode phrase list (up to 60 phrases) |
+| `GET /api/vocabulary`, `POST /api/vocabulary` | Read or replace saved names and places used to correct readings and given to the planner |
 
 
 ## Extend existing components

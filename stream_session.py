@@ -45,6 +45,7 @@ class StreamSession:
         self.conversation = self.hello.get("conversation") is True
         self.commands = self.hello.get("commands") is True
         self.phrases = await self.load_phrases() if self.commands else []
+        self.vocabulary = await self.load_vocabulary()
         self.mode = self.hello.get("mode", "live")
         self.mode = self.mode if self.mode in {"live", "phrase"} else "live"
         self.buffer = StreamBuffer()
@@ -93,12 +94,33 @@ class StreamSession:
         store = self.runtime.agent_store
         return await store.async_db(store.phrases)
 
+    async def load_vocabulary(self):
+        store = self.runtime.agent_store
+        return await store.async_db(store.vocabulary)
+
+    def correct_names(self, result):
+        """Swap spans that look like the user's saved names or places, keeping what was read."""
+        text, changes = commands.correct_terms(result["text"], self.vocabulary)
+        if not changes:
+            return result
+        alternatives = [
+            commands.correct_terms(a, self.vocabulary)[0] for a in result.get("alternatives", [])
+        ]
+        return {
+            **result,
+            "text": text,
+            "heard": result["text"],
+            "alternatives": [a for a in dict.fromkeys(alternatives) if a != text],
+        }
+
     async def finish_turn(self, turn_id, endpoint):
         turn = self.utterances.turns.get(turn_id)
         if turn and turn["sent"]:
             return
         result = self.utterances.finish(turn_id, endpoint)
         if result:
+            if self.vocabulary:
+                result = self.correct_names(result)
             if self.commands:
                 # A closed phrase list replaces free-form guards: snap to a phrase or hold.
                 result = commands.apply(result, self.phrases)
@@ -418,6 +440,8 @@ class StreamSession:
                         await self.send({"type": "pong"})
                     elif control.get("type") == "conversation":
                         self.conversation = control.get("enabled") is True
+                    elif control.get("type") == "vocabulary":
+                        self.vocabulary = await self.load_vocabulary()
                     elif control.get("type") == "commands":
                         self.commands = control.get("enabled") is True
                         self.phrases = await self.load_phrases() if self.commands else []

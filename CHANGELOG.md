@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Add saved names and places: reading spans that look like a saved name on the lips are corrected in every mode, the original reading stays visible, and the planner receives the list.
+
 Add Commands mode: finished turns snap to the closest saved phrase using spelling and lip-shape similarity, or are held when no phrase fits clearly. Phrases are edited in Settings and stored locally.
 
 Send up to two alternative lip readings with each automatic request so the assistant can resolve look-alike misreads, stating its guess. Notes and timers proposed from a guess still require confirmation.

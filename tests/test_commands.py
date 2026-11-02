@@ -3,7 +3,7 @@ import unittest
 from support import RuntimeTestCase
 
 import commands
-from commands import DEFAULT_PHRASES, clean_phrases, lip_shapes, match
+from commands import DEFAULT_PHRASES, clean_phrases, correct_terms, lip_shapes, match
 
 
 class CommandMatchTests(unittest.TestCase):
@@ -49,7 +49,35 @@ class CommandMatchTests(unittest.TestCase):
                 clean_phrases(bad)
 
 
+class NameCorrectionTests(unittest.TestCase):
+    terms = ["Trader Joe's", "Whole Foods", "Maya", "Omar"]
+
+    def test_lip_reading_misses_of_saved_names_are_corrected(self):
+        cases = {
+            "HELLO I'M HEADING TO TRAITOR JONES TO BUY GROCERIES": "HELLO I'M HEADING TO Trader Joe's TO BUY GROCERIES",
+            "TRAINER JONES": "Trader Joe's",
+            "I'M GOING TO DRAKE JONES TONIGHT": "I'M GOING TO Trader Joe's TONIGHT",
+            "LET'S GO TO HOLE FOODS": "LET'S GO TO Whole Foods",
+            "TELL OMER": "TELL Omar",
+        }
+        for reading, corrected in cases.items():
+            self.assertEqual(correct_terms(reading, self.terms)[0], corrected, reading)
+
+    def test_ordinary_words_are_left_alone(self):
+        for reading in ["MY NAME IS MAYOR", "I WENT TO TRADE SHOWS", "OH MY", "I'M NOT SURE"]:
+            self.assertEqual(correct_terms(reading, self.terms), (reading, []), reading)
+
+
 class PhraseRouteTests(RuntimeTestCase):
+    def test_vocabulary_defaults_empty_saves_and_requires_access(self):
+        self.assertEqual(self.client.get("/api/vocabulary").status_code, 401)
+        headers = {"Authorization": "Bearer " + self.runtime.token}
+        self.assertEqual(self.client.get("/api/vocabulary", headers=headers).json()["terms"], [])
+        saved = self.client.post(
+            "/api/vocabulary", headers=headers, json={"terms": ["Trader Joe's"]}
+        )
+        self.assertEqual(saved.json()["terms"], ["Trader Joe's"])
+
     def test_phrases_default_save_and_require_access(self):
         self.assertEqual(self.client.get("/api/phrases").status_code, 401)
         headers = {"Authorization": "Bearer " + self.runtime.token}

@@ -119,7 +119,7 @@ A tunnel restart changes its origin: reopen the newest link. Detached operation 
 
 1. Open the printed HTTPS link or scan the QR code. Treat both as passwords.
 2. Allow camera access, face the lens in good light and start the conversation. No microphone permission is requested.
-3. Use **Live** for growing drafts and pause-based turn completion. Use **Phrase** for a short deliberate capture with detailed decoding. Use **Commands** for the most reliable results: each finished turn snaps to the closest of your saved phrases, comparing both spelling and lip shapes so look-alike words ("heaven" and "seven") still match, and is held when none fits clearly. Edit the phrase list under Settings, Command phrases; the list is saved on the computer, and a running Commands session picks up changes. **Finish sentence** completes a missed pause manually.
+3. Use **Live** for growing drafts and pause-based turn completion. Use **Phrase** for a short deliberate capture with detailed decoding. Use **Commands** for the most reliable results: each finished turn snaps to the closest of your saved phrases, comparing both spelling and lip shapes so look-alike words ("heaven" and "seven") still match, and is held when none fits clearly. Edit the phrase list under Settings, Command phrases; the list is saved on the computer, and a running Commands session picks up changes. In every mode, add the names, places and brands you say under Settings, Names and places: a reading span that looks like one of them on the lips ("TRAITOR JONES" for Trader Joe's) is replaced, the caption shows what was read, and the assistant receives the list too. Names that are also everyday words ("May" and "Maya") look identical on the lips and cannot be told apart. **Finish sentence** completes a missed pause manually.
 4. Keep your face frontal and lips large enough in the picture. Framing hints report light, distance, head angle and delivery problems; they are advice rather than transcript confidence.
 5. Keep the page visible while speaking. Hiding the tab pauses capture; returning resumes it after the previous capture finishes. Press Stop reading to stop it until you choose Start again. Computer tasks continue independently.
 
@@ -369,7 +369,7 @@ flowchart TD
 | `server.py`, `runtime.py`, `config.py` | HTTP/auth, startup-owned resources, shared timing/protocol and concurrency |
 | `stream_session.py`, `stream_buffer.py` | Camera scheduling and bounded consume-once frames |
 | `engine.py`, `turn_taking.py`, `recognition_guard.py` | Recognition, visual endpoints, assembly and existing heuristics |
-| `commands.py` | Commands mode: lip-shape-aware matching of turns to saved phrases |
+| `commands.py` | Commands mode phrase matching and saved-name correction by spelling and lip shapes |
 | `provider.py`, `agent.py`, `web_results.py` | Provider protocols, durable jobs/tools, cited report validation |
 | `speech.py` | Optional generated speech for replies and captions |
 | `phone-app/dist/` | Buildless camera, review, work-card and spoken-reply interface |

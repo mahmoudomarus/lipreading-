@@ -294,6 +294,8 @@ class AgentTests(unittest.IsolatedAsyncioTestCase):
         await self.store.run_once(Provider())
         instructions, payload = captured[0]
         self.assertEqual(payload["other_readings"], ["HELLO THERE", "YELLOW THERE"])
+        self.assertEqual(payload["user_vocabulary"], [])
+        self.assertIn("user_vocabulary", instructions)
         self.assertIn("other_readings", instructions)
 
     def test_alternatives_are_validated_and_ignored_for_typed_requests(self):

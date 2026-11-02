@@ -236,6 +236,27 @@ async def phrases_save(request: Request):
     return {"phrases": saved}
 
 
+@router.get("/api/vocabulary")
+async def vocabulary_get(request: Request):
+    runtime = request.app.state.runtime
+    authorize_request(request)
+    return {"terms": await runtime.agent_store.async_db(runtime.agent_store.vocabulary)}
+
+
+@router.post("/api/vocabulary")
+async def vocabulary_save(request: Request):
+    runtime = request.app.state.runtime
+    authorize_request(request)
+    body = await small_json(request, 9000)
+    try:
+        saved = await runtime.agent_store.async_db(
+            runtime.agent_store.save_vocabulary, body.get("terms")
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+    return {"terms": saved}
+
+
 @router.post("/api/agent/cancel-all")
 async def cancel_all_agents(request: Request):
     runtime = request.app.state.runtime
