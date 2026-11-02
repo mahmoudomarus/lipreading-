@@ -16,6 +16,41 @@ export function readConnection(hash, origin, stored = {}) {
   return { server: url.origin, key };
 }
 
+export function createVisibilityResume({ hidden, running, finishing, start, stop, onPaused }) {
+  let pending = false;
+  function resume() {
+    if (!pending || hidden() || finishing()) return false;
+    pending = false;
+    start();
+    return true;
+  }
+  return {
+    changed() {
+      if (hidden()) {
+        if (running()) {
+          pending = true;
+          stop();
+          onPaused();
+        }
+        return false;
+      }
+      return resume();
+    },
+    deferred() {
+      pending = true;
+      onPaused();
+    },
+    finished() {
+      if (!pending) return false;
+      if (!resume()) onPaused();
+      return true;
+    },
+    cancel() {
+      pending = false;
+    },
+  };
+}
+
 export function framePacket(timestamp, jpeg) {
   const header = new ArrayBuffer(8);
   new DataView(header).setFloat64(0, timestamp, true);

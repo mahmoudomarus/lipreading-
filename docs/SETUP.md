@@ -81,7 +81,7 @@ The complete setting table and local/hosted examples are maintained in [README s
 
 Use either the foreground launcher or detached launcher, not both. The manager starts its own server/tunnel and writes PID, logs, and links in `.runtime/`. It does not install a login item, restart on system reboot, or prevent computer sleep. Restarting after changing environment variables loads the new process environment. A server restart marks in-flight model calls failed instead of replaying them; queued jobs resume and pending confirmations remain available.
 
-Agent work can complete while the browser is closed. Timer due times persist and update after reconnecting, but there are no closed-phone push notifications or alarm sounds. Phone camera capture pauses when the page becomes hidden. iOS does not support the locked/background camera experience this prototype would otherwise need.
+Agent work can complete while the browser is closed. Timer due times persist and update after reconnecting, but there are no closed-phone push notifications or alarm sounds. Camera capture pauses when the page becomes hidden and resumes on return after its previous capture finishes. Stop reading keeps capture stopped; Studio recording does not restart automatically. iOS does not support the locked/background camera experience this prototype would otherwise need.
 
 ## Studio and a separate frontend
 

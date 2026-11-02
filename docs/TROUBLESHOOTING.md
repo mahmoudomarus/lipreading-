@@ -18,7 +18,7 @@
 | Agent plan fails validation | The model did not follow the bounded schema; use a more capable compatible model or add a tested adapter, without bypassing validation |
 | Note/timer not created | Open the pending action and confirm it. A proposal is not execution |
 | Timer has no phone alarm | Only persisted due times/countdowns are implemented; push notifications are not |
-| Camera stops on background/lock | Expected phone browser behavior. Computer jobs continue; camera capture requires the page to stay visible |
+| Camera pauses on background/lock | Capture requires a visible page. Return to resume after the old capture finishes; Stop reading keeps it stopped. Computer jobs continue and Studio needs a new recording action |
 | MP4 export fails | Check FFmpeg availability and clip length/size. The original browser recording remains available; verify on the target phone |
 | Background service not running after reboot/sleep | It is a detached process, not a login service, and it does not prevent sleep. Start it again and use the new link |
 

@@ -122,7 +122,7 @@ A tunnel restart changes its origin: reopen the newest link. Detached operation 
 2. Allow camera access, face the lens in good light and start the conversation. No microphone permission is requested.
 3. Use **Live** for growing drafts and pause-based turn completion. Use **Phrase** for a short deliberate capture with detailed decoding. **Finish sentence** completes a missed pause manually.
 4. Keep your face frontal and lips large enough in the picture. Framing hints report light, distance, head angle and delivery problems; they are advice rather than transcript confidence.
-5. Keep the page visible. Camera capture stops when it becomes hidden. Computer tasks can continue independently.
+5. Keep the page visible while speaking. Hiding the tab pauses capture; returning resumes it after the previous capture finishes. Press Stop reading to stop it until you choose Start again. Computer tasks continue independently. Studio recordings stop on hide and need a new Record action.
 
 The link fragment carries the app access key, which is distinct from a provider key. The browser strips connection fragments and retains the connection in session storage. A static preview alone cannot run recognition.
 
@@ -313,6 +313,7 @@ Smoke/timing/evaluation accept `--server`, `--token-file` and `--report` for iso
 | Phone cannot connect | Keep the computer awake and reopen the newest HTTPS link |
 | Access denied | Use this installation's app key, not a provider API key |
 | Camera permission missing | Allow camera on the HTTPS page and keep it visible |
+| Camera pauses when switching tabs | Return to the demo tab to resume capture; Stop reading disables automatic resume. Studio recording must be restarted explicitly |
 | Port 8765 occupied | Stop the existing project launcher before starting another |
 | Torch import failure | Install matching torch/vision/audio builds for Python 3.11 |
 | Asset or vendor mismatch | Preserve edits; verify hashes and use asset repair deliberately |

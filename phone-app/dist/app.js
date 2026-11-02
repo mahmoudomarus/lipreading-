@@ -8,6 +8,7 @@ import {
   upsertCaption,
   compareWords,
   readingCandidates,
+  createVisibilityResume,
 } from './core.js';
 import { createStudio, createAudioEngine } from './studio.js';
 
@@ -115,6 +116,17 @@ const studio = createStudio({
     if (visible)
       stageCaptureTimer = setInterval(() => captureFrame(performance.now(), video.currentTime), 20);
   },
+});
+const visibilityResume = createVisibilityResume({
+  hidden: () => document.hidden,
+  running: () => running,
+  finishing: () => finishing || connecting,
+  start: () => startCapture(),
+  stop: () => {
+    restartAfterStop = false;
+    stopCapture();
+  },
+  onPaused: () => status('Camera paused while this tab is hidden. Return to resume.'),
 });
 
 function status(message, kind = '') {
@@ -289,6 +301,11 @@ async function startCapture() {
   status('Opening your camera…', 'working');
   try {
     await openCamera();
+    if (document.hidden) {
+      cleanup();
+      visibilityResume.deferred();
+      return;
+    }
     const url = new URL('/api/stream', connection.server);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(url);
@@ -328,6 +345,11 @@ async function startCapture() {
         reject(new Error('The connection was closed. Try again.'));
       };
     });
+    if (document.hidden) {
+      cleanup();
+      visibilityResume.deferred();
+      return;
+    }
     running = sending = true;
     connecting = finishing = false;
     sessionId = String(Date.now());
@@ -346,6 +368,7 @@ async function startCapture() {
       const unexpected = running || finishing;
       restartAfterStop = false;
       cleanup();
+      if (visibilityResume.finished()) return;
       if (unexpected) {
         status('Connection lost. Tap start to reconnect.', 'error');
         checkStatus();
@@ -384,6 +407,7 @@ async function startCapture() {
       wakeLock = await navigator.wakeLock?.request('screen');
     } catch {}
   } catch (error) {
+    visibilityResume.cancel();
     cleanup();
     status(cameraError(error), 'error');
     $('start').disabled = false;
@@ -578,6 +602,7 @@ function receive(event) {
     const restart = restartAfterStop;
     restartAfterStop = false;
     cleanup();
+    if (visibilityResume.finished()) return;
     if (restart) startCapture();
     else
       status(
@@ -703,6 +728,7 @@ function stopMedia() {
     document.createTextNode('CAMERA OFF'),
   );
   $('capture-progress').style.width = '0';
+  $('fps').textContent = '-- fps';
   wakeLock?.release().catch(() => {});
   wakeLock = null;
 }
@@ -741,7 +767,10 @@ function cleanup() {
   $('draft-card').hidden = true;
   $('transcript-empty').hidden = entries.length > 0;
 }
-$('start').onclick = () => (running ? stopCapture() : startCapture());
+$('start').onclick = () => {
+  visibilityResume.cancel();
+  return running ? stopCapture() : startCapture();
+};
 function commitSentence() {
   if (running && socket?.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ type: 'commit' }));
@@ -802,13 +831,9 @@ $('settings-dialog').addEventListener('click', (event) => {
   if (event.target === $('settings-dialog')) $('settings-dialog').close();
 });
 $('reference-text').addEventListener('input', () => compareReference());
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && running) {
-    restartAfterStop = false;
-    stopCapture();
-  }
-});
+document.addEventListener('visibilitychange', () => visibilityResume.changed());
 window.addEventListener('pagehide', () => {
+  visibilityResume.cancel();
   clearTimeout(pollTimer);
   clearInterval(stageCaptureTimer);
   studio.dispose();

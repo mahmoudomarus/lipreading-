@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Resume a user-started camera session when its tab becomes visible again, after the old capture finishes. Keep capture off while hidden, retain explicit Stop behavior and clear stale FPS. Show intentional pause separately from connection failure.
+
 Remove the unused provider-specific compatibility routes, retaining caption speech behind the generic provider route. Review holds are kept by default. Surface camera-session failures before closing and normalize combined alternatives.
 
 Run background jobs concurrently with a configurable default limit of three. Speech only stops caption audio; it no longer cancels jobs, pending confirmations or older finished turns. Add per-task cancellation, Cancel and edit, and Stop all. Keep terminal cancellation and request UUIDs authoritative, preserve pending confirmations beyond the history window, and offload async SQLite work from the event loop.
