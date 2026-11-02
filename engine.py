@@ -21,6 +21,13 @@ class CaptureError(ValueError):
     pass
 
 
+# Face detector box widths in pixels. In a single-clip replay a 93 px face read
+# correctly and a 74 px face did not, so smaller faces are refused and faces below the
+# advice size are read while the user is asked to move closer. One clip, not a study.
+MIN_FACE_PIXELS = 85
+ADVISE_FACE_PIXELS = 110
+
+
 class NoSpeech(CaptureError):
     """No visual speech evidence; clear the window without inventing a caption."""
 
@@ -225,7 +232,7 @@ class LipReader:
             face = result.detections[0]
             detected += 1
             height, width = frame.shape[:2]
-            face_sizes.append(face.bounding_box.width / width)
+            face_sizes.append(face.bounding_box.width)
             points = face.keypoints
             eye_width = abs(points[1].x - points[0].x)
             head_turns.append(
@@ -239,7 +246,9 @@ class LipReader:
         coverage = detected / ((len(frames) + 1) // 2)
         if coverage < 0.7:
             raise CaptureError("Keep one face fully visible, facing the camera, in good light.")
-        if np.median(face_sizes) < 0.28:
+        # The mouth crop is resized to 96 px, so what matters is the face's pixel width,
+        # not its share of the frame.
+        if np.median(face_sizes) < MIN_FACE_PIXELS:
             raise CaptureError("Move closer so your face and lips are clearer.")
         if np.median(head_turns) > 0.40:
             raise CaptureError(
@@ -386,7 +395,7 @@ class QualityMonitor:
             "box": [x / w, y / h, box.width / w, box.height / h],
             "landmarks": [[round(p.x, 4), round(p.y, 4)] for p in points[:4]],
         }
-        if box.width / w < 0.32:
+        if box.width < ADVISE_FACE_PIXELS:
             return {
                 **base,
                 **values,

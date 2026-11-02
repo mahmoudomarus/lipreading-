@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Judge face size in pixels instead of share of frame. The old 28% rule refused faces the recognizer reads correctly; a 93 px face now reads, while faces under 85 px are still refused with guidance.
+
 Add an understanding step: the planner first reconstructs the sentence the user most likely said, with a certainty rating, shown beside the raw lip reading, and answers that sentence. Add Speak for me, which says the understood sentence aloud instead of answering it.
 
 Report speaking turns that yield no words instead of dropping them silently, and stop a flickering face from holding a turn open.
