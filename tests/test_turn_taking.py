@@ -71,10 +71,30 @@ class TurnTests(unittest.TestCase):
         self.assertIsNone(state.observe([0, 1], 0)["event"])
         self.assertIsNone(state.observe([0.04, 1], 0.12)["event"])
         self.assertEqual(state.observe([0.08, 1], 0.24)["event"], "started")
-        self.assertTrue(state.observe([0.08, 1], 0.8)["speaking"])
-        end = state.observe([0.08, 1], 1.4)
-        self.assertEqual(end["event"], "stopped")
-        self.assertEqual(end["turn_id"], 1)
+        # The server samples lips about every 0.12 s; a still mouth ends the turn.
+        events = {}
+        for step in range(3, 20):
+            result = state.observe([0.08, 1], step * 0.12)
+            if result["event"]:
+                events[result["event"]] = (step * 0.12, result["turn_id"])
+        self.assertIn("stopped", events)
+        self.assertLess(events["stopped"][0], 0.24 + 1.05 + 0.5)
+        self.assertEqual(events["stopped"][1], 1)
+
+    def test_single_sample_landmark_jitter_does_not_keep_a_turn_open(self):
+        state = LipActivity()
+        for step, value in enumerate([0, 0.04, 0.08, 0.12]):
+            state.observe([value, 1], step * 0.12)
+        self.assertTrue(state.speaking)
+        # A still face with a one-sample landmark spike every third sample.
+        stopped = None
+        for step in range(4, 40):
+            spike = 0.02 if step % 3 == 0 else 0
+            if state.observe([0.12 + spike, 1], step * 0.12)["event"] == "stopped":
+                stopped = step * 0.12
+                break
+        self.assertIsNotNone(stopped)
+        self.assertLess(stopped, 0.36 + 1.05 + 0.5)
 
     def test_static_face_and_tracking_loss_do_not_create_fake_turn_boundaries(self):
         state = LipActivity()

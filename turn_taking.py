@@ -5,9 +5,10 @@ from collections import deque
 
 
 class LipActivity:
-    def __init__(self, pause_seconds=1.05, movement_threshold=0.008):
+    def __init__(self, pause_seconds=1.05, movement_threshold=0.008, smoothing=0.6):
         self.pause_seconds = pause_seconds
         self.threshold = movement_threshold
+        self.smoothing = smoothing
         self.reset()
 
     def reset(self):
@@ -37,16 +38,25 @@ class LipActivity:
                 self.last_motion = timestamp
             movement = 0.0
         else:
-            movement = max(abs(a - b) for a, b in zip(shape, self.previous, strict=True))
-            self.previous = tuple(shape)
+            # Exponential smoothing damps per-sample landmark jitter on small or noisy
+            # faces; real articulation persists across samples and still registers.
+            smoothed = tuple(
+                self.smoothing * a + (1 - self.smoothing) * b
+                for a, b in zip(shape, self.previous, strict=True)
+            )
+            movement = max(abs(a - b) for a, b in zip(smoothed, self.previous, strict=True))
+            self.previous = smoothed
         moving = movement >= self.threshold
         self.motions.append(moving)
         if moving:
-            self.last_motion = timestamp
             if self.first_motion is None:
                 self.first_motion = timestamp
         elif not self.speaking and not any(self.motions):
             self.first_motion = None
+        # A lone over-threshold frame is landmark jitter, not speech, so it must not
+        # keep a turn open; small or noisy faces otherwise never reach the pause.
+        if sum(self.motions) >= 2:
+            self.last_motion = timestamp
         if not self.speaking and sum(self.motions) >= 2:
             self.speaking = True
             self.turn += 1
