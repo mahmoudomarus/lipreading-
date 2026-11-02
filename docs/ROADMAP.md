@@ -5,7 +5,7 @@ The concept is a silent interface to useful software. The bottleneck is trustwor
 | Priority | Experiment | Evidence needed before calling it an improvement |
 | --- | --- | --- |
 | 1 | Establish a consented validation/held-out phone corpus | Separate speakers and sentences; references withheld from inference; genuinely silent mouthing, natural no-speech and hard negatives included |
-| 2 | Evaluate the optional existing-hold preservation fix | Compare accepted-reading accuracy, clarification, critical/intent errors and latency against the frozen full-demo baseline; default remains off |
+| 2 | Measure the default hold behavior | Compare accepted-reading accuracy, clarification, critical/intent errors and latency against the frozen full-demo baseline; holds remain blocking; no accuracy improvement is claimed |
 | 3 | Investigate observed crop, capture and timing errors | Change one existing component at a time only where labeled failures justify it; same-clip WER and latency, including regressions |
 | 4 | Evaluate existing candidates/context selection and guards | Candidate oracle WER, selection mistakes and added latency; validation-only threshold calibration and held-out acceptance/clarification tradeoff; no duplicate LLM layer |
 | 5 | Reduce waste in inference and transport | Stage-level timing, memory/capture continuity, numerical or transcript equivalence where claimed, controlled warmup/load |
@@ -36,4 +36,4 @@ Use [the research methodology](RESEARCH.md), the [example manifest](examples/hel
 
 ## Outside the current prototype
 
-The current lip-activity turn detector needs held-out calibration for false interruptions and missed pauses. Arbitrary app operation, external write tools, native/wearable capture, multi-user hosting, background phone alarms and durable provider secret storage need their own designs. The browser cannot promise camera capture while a phone is locked. Preserve honest capture/prediction/action states in any demo.
+The current lip-activity turn detector needs held-out calibration for false activity starts and missed pauses. Arbitrary app operation, external write tools, native/wearable capture, multi-user hosting, background phone alarms and durable provider secret storage need their own designs. The browser cannot promise camera capture while a phone is locked. Preserve honest capture/prediction/action states in any demo.

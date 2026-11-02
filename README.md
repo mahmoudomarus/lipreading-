@@ -1,90 +1,332 @@
 # Lipread Lab
 
-**What if a silent sentence could become a useful action?**
+## 1. What it is
 
-Lipread Lab is an experimental phone-camera interface for a small agent. Mouth a sentence and pause: finalized lip predictions go straight to the agent for a reply. Ask a question, calculate something, save a note, or start a timer. The microphone stays off.
+Lipread Lab turns a phone camera into an experimental input for an assistant. Mouth an English request, pause, and see predicted words and a reply. The computer runs visual recognition; a replaceable text model answers questions or proposes bounded tools. The microphone stays off.
 
-> **Early research prototype.** This is an idea to explore and improve together. Unrestricted English lip reading is not solved here. The current recognizer processes growing video windows with an offline model; it is not a fully streaming recognizer. Predictions can be wrong even in good conditions.
+**Status and limitations:** The recognizer repeatedly decodes offline video windows, so this is not causal streaming and results can be delayed or wrong. Accuracy has not been measured on a labeled phone corpus or genuine silent mouthing; guards are uncalibrated, and a text model cannot verify the video. This is a single-user prototype with one server process and one camera session. Full inference was checked on the development Mac; other operating systems and phone/browser combinations need validation. The computer must stay awake and phone capture requires a visible, unlocked page. Timers have no closed-phone push alarm. Arbitrary desktop control, shell execution, purchases, email sending and social posting are outside the tool set.
 
-[Get started](docs/SETUP.md) · [How it works](docs/ARCHITECTURE.md) · [Improve it](docs/ROADMAP.md) · [Contribute](CONTRIBUTING.md)
+## 2. Requirements
 
-## What works today
+| Requirement | Purpose |
+| --- | --- |
+| macOS, Python 3.11 | Full development target; Linux runs lightweight CI tests; Windows is unvalidated |
+| Git | Source and pinned inference checkout |
+| FFmpeg and ffprobe | Studio export and conversion tests |
+| cloudflared | Temporary HTTPS phone connection |
+| Node 22 | Tests/formatting only; normal use needs no Node service |
+| Several GB free | 1,220,980,675 bytes of assets plus Python/PyTorch dependencies |
 
-- Phone camera → authenticated video stream → visual-only English captions on your computer.
-- Live replies send eligible finalized predictions automatically. Silence, unsupported/repetitive decodes, and recent repeated long readings are held back for correction. Use **Misread · ignore** to remove a mistaken turn from future context. Switch off Live replies for editable manual review. Provisional drafts never reach the agent.
-- Visual pause detection completes each eligible spoken turn independently. Speaking stops generated audio playback but leaves background tasks and pending confirmations alone.
-- Questions, notes, timers, arithmetic, cited web research, page previews, and downloadable Markdown drafts.
-- Action previews for notes and timers, persisted execution receipts, and duplicate-request protection.
-- Replaceable hosted/local text models through Responses or Chat-compatible APIs.
-- A recording studio for actual camera footage, labeled predictions, agent replies, and optional generated speech.
-- Background computer jobs. Phone camera capture requires a visible page; locked-phone capture and push alarms are not supported.
+On macOS with Homebrew:
 
-Web research and sandboxed page-preview cards are included. Arbitrary desktop-app control, shell execution, sending email, purchasing, and automatic social posting are not included. See [turn-taking and work cards](docs/TURN_TAKING.md).
+```sh
+brew install python@3.11 git ffmpeg cloudflared
+# Only for frontend development:
+brew install node@22
+```
 
-## Background tasks and cancellation
-
-Up to three tasks run concurrently; set `AGENT_MAX_CONCURRENT_JOBS` from 1 to 12 to change the bound. Additional jobs queue, with a maximum of twelve queued or running jobs. Notes and timers awaiting confirmation do not occupy running slots and wait until you confirm or cancel them. Speaking and newer turns never cancel work or replace older finished turns.
-
-Every active task has Cancel and Cancel and edit controls. Stop all cancels queued, running and awaiting-confirmation jobs. Cancel and edit invalidates the old task before opening a new request with a new UUID. A selected caption changes the display only until explicitly reviewed and sent. Completed effects are not undone. Misread ignore applies to finished jobs; cancel an active task before ignoring it.
-
-Agent work continues when the browser closes. Restart recovery preserves queued jobs and pending confirmations, and marks in-flight calls failed. Each task uses up to four already-completed earlier jobs as context without waiting for still-running siblings. Keep one uvicorn process; concurrency refers to agent tasks, not server workers.
-
-## Quick start
-
-The development target is **macOS with Python 3.11**. Linux runs the lightweight CI tests; full Linux inference and Windows are not yet validated. Install Git, FFmpeg, and `cloudflared` first. Model files total about 1.25 GB; Python/PyTorch needs additional space.
+## 3. Install
 
 ```sh
 git clone https://github.com/mahmoudomarus/lipreading-.git
 cd lipreading-
 python3.11 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python scripts/setup.py
 .venv/bin/python scripts/doctor.py
+```
+
+Use matching `torch`, `torchvision` and `torchaudio` builds for your platform. Development used 2.11.0 / 0.26.0 / 2.11.0. Runtime dependency ranges are not a platform lockfile; the lightweight test environment has [constraints](constraints-test.txt).
+
+Setup checks the clean Chaplin revision, byte count and SHA256 of all six assets against [assets.json](assets.json). Downloads go in `models/` and `vendor/`, outside Git. Existing mismatches fail safely; repair verifies a replacement before replacing an asset, and never resets vendor edits.
+
+```sh
+.venv/bin/python scripts/setup.py --verify-only
+# Use only when an asset needs replacement:
+.venv/bin/python scripts/setup.py --repair
+```
+
+Exact assets, roles and provenance are in [the model reference](docs/MODELS.md). Upstream download URLs can change; a checksum mismatch requires investigation rather than disabling verification.
+
+## 4. Run
+
+```sh
+# Foreground; Ctrl+C stops it:
+.venv/bin/python scripts/serve.py
+
+# Alternatively, detached from the terminal:
+.venv/bin/python scripts/service.py start
+.venv/bin/python scripts/service.py status
+.venv/bin/python scripts/service.py restart
+.venv/bin/python scripts/service.py stop
+```
+
+Use one launcher at a time. It binds `127.0.0.1:8765` and starts a temporary HTTPS tunnel. Model initialization continues after the web server starts; wait for Ready. The private link is printed and saved in `.runtime/phone-url`; the QR image is `.runtime/phone-qr.png`. Logs are `.runtime/server.log` and, for detached operation, `.runtime/service.log`. These can contain sensitive diagnostics and the private link.
+
+A tunnel restart changes its origin: reopen the newest link. Detached operation is not a login service and does not prevent sleep or restart on reboot. Change environment settings before restarting the process.
+
+## 5. Connect your phone
+
+1. Open the printed HTTPS link or scan the QR code. Treat both as passwords.
+2. Allow camera access, face the lens in good light and start the conversation. No microphone permission is requested.
+3. Use **Live** for growing drafts and pause-based turn completion. Use **Phrase** for a short deliberate capture with detailed decoding. **Finish sentence** completes a missed pause manually.
+4. Keep your face frontal and lips large enough in the picture. Framing hints report light, distance, head angle and delivery problems; they are advice rather than transcript confidence.
+5. Keep the page visible. Camera capture stops when it becomes hidden. Computer tasks can continue independently.
+
+The link fragment carries the app access key, which is distinct from a provider key. The browser strips connection fragments and retains the connection in session storage. A static preview alone cannot run recognition.
+
+For an optional separate static frontend, set its exact `LIPREAD_SITE_ORIGIN` before launching. Generate its connected link with:
+
+```sh
+.venv/bin/python scripts/phone_link.py https://your-tunnel.example \
+  --site-url https://your-frontend.example
+```
+
+## 6. Connect a text model
+
+Recognition needs no provider key. For assistant replies open **Settings → Model connection**, choose Responses or Chat-compatible, and enter the API base URL, exact model ID and key when required. Connecting makes a small model request and may incur charges. `localhost` refers to the Python computer.
+
+For an already installed local Ollama-style compatible model:
+
+```sh
+export AGENT_PROTOCOL=chat
+export AGENT_BASE_URL=http://127.0.0.1:11434/v1
+export AGENT_MODEL=your-installed-model
 .venv/bin/python scripts/serve.py
 ```
 
-Open the printed private HTTPS link or scan its QR code on your phone. Allow camera access and press **Start conversation**. Speak a short phrase and pause; the agent replies automatically. **Finish sentence** is available if a pause is missed. Switch off **Live replies** to review/edit before sending instead. Notes and timers still require confirmation.
-
-Recognition requires no API key. To use the agent, connect your preferred endpoint in **Settings → Model connection**. Your computer must stay awake. `Ctrl+C` stops the foreground service. [Detailed installation, model configuration, and background operation →](docs/SETUP.md)
-
-## Architecture
-
-```mermaid
-flowchart LR
-    Camera[Phone camera / no microphone] --> Reader[Visual recognizer on computer]
-    Reader --> Review[Final prediction / optional manual review]
-    Review --> Model[Replaceable text model]
-    Model --> Plan[Validated answer or action plan]
-    Plan --> Confirm[Confirmation for writes]
-    Confirm --> Tools[Local tools + SQLite receipts]
-    Tools --> UI[Reply and Studio overlay]
-```
-
-Final lip predictions, manually reviewed or typed text, and recent completed agent context go to the selected text provider. Camera frames stay in the computer's recognition pipeline. Optional speech uses a separate adapter. [Module map, API boundaries, and extension points →](docs/ARCHITECTURE.md)
-
-## Limitations
-
-Recognition accuracy has not been established on a labeled phone corpus or genuine silent mouthing. The system processes offline windows, so text arrives after capture and decoding delays. Quality checks and review guards are uncalibrated and can miss errors or reject correct readings. A stronger text model does not independently verify visible speech.
-
-The prototype supports one user, one worker and one camera session. Phone capture requires a visible page; the computer must stay awake. Full inference and phone interactions need validation beyond the development Mac. Timers have no closed-phone push alarm. Research, speech and embedding capabilities depend on the selected adapter. The service is not audited for multi-user or high-impact execution.
-
-[Canonical baseline and timing data](docs/BASELINE.md) · [Evaluation](docs/EVALUATION.md) · [Recording protocol](docs/RECORDING.md) · [Architecture](docs/ARCHITECTURE.md)
-
-## Develop without downloading models
-
-Python 3.11, Node 22, and FFmpeg are sufficient for the lightweight suite:
+For a hosted compatible endpoint:
 
 ```sh
-python3.11 -m venv .venv
-.venv/bin/python -m pip install -r requirements-test.txt
-.venv/bin/python -m unittest discover -s tests -v
-node --test phone-app/tests/*.test.mjs
+export AGENT_PROTOCOL=chat
+export AGENT_BASE_URL=https://your-provider.example/v1
+export AGENT_MODEL=your-model-id
+read -s AGENT_API_KEY
+export AGENT_API_KEY
+.venv/bin/python scripts/serve.py
 ```
 
-Tests cover frame/authentication boundaries, caption handling, provider errors, agent plans, confirmation, duplicate requests, restart recovery, and video export. They do not establish recognition accuracy. [Developer guide →](docs/DEVELOPMENT.md)
+Supported process settings follow. `.env.example` documents them; there is no automatic `.env` loader. Settings entered in the UI last for the server process. Keys stay on the server, are never returned by the configuration API, and a changed endpoint requires an explicit new key. Connection changes are rejected while jobs are queued or running.
 
-## Privacy and license
+| Variable | Default and meaning |
+| --- | --- |
+| `AGENT_PROTOCOL` | `responses`; `chat` for Chat-compatible endpoints |
+| `AGENT_BASE_URL` | `https://api.openai.com/v1`; remote endpoints require HTTPS, loopback can use HTTP |
+| `AGENT_MODEL` | `gpt-6.1-sol`; exact provider-supported ID |
+| `AGENT_API_KEY` | No key; explicit credential for the selected endpoint |
+| `OPENAI_API_KEY` | Legacy fallback only for the unchanged default endpoint; explicit generic key takes precedence |
+| `AGENT_MAX_CONCURRENT_JOBS` | `3`; integer from 1 to 12 |
+| `AGENT_VOICE_MODEL` | `gpt-realtime-2.1-mini`; optional generated-speech adapter model |
+| `LIPREAD_DEVICE` | `cpu`; `auto` chooses available Metal, `mps` is experimental |
+| `LIPREAD_THREADS` | `4`; PyTorch CPU threads |
+| `LIPREAD_BEAM` | `12`; detailed phrase beam |
+| `LIPREAD_FAST_BEAM` | `4`; live refinement beam |
+| `LIPREAD_CACHE_DETECTIONS` | `1`; `0` disables reuse of face detections within a session |
+| `LIPREAD_SITE_ORIGIN` | Empty; optional exact separate frontend origin, otherwise `.runtime/site-origin` if present |
+| `MPLCONFIGDIR` | Launcher defaults to `.runtime/matplotlib`; library configuration/cache |
+| `XDG_CACHE_HOME` | Launcher defaults to `.runtime/cache`; library cache |
 
-API credentials stay in server memory. Automatically submitted or reviewed requests, replies, notes, timers, and tool receipts are saved locally in `.runtime/agent.sqlite3`. Video is kept in RAM unless you choose to record; conversion uses temporary files. The tunnel relays traffic, and your selected provider's policies apply to text you send. Keep private links, recordings, and `.runtime/` out of Git.
+The included research adapter requires the supported hosted Responses endpoint. Other compatible endpoints can answer and use local tools but need their own research adapter. Optional speech currently has one hosted Realtime adapter; it receives caption text only, and playback is rejected if its returned transcript differs. The text agent and candidate selector receive no camera images. No second cleanup model is added.
 
-This is a single-user prototype, not an audited production service. [Security and data handling](SECURITY.md) · [MIT license for original code](LICENSE) · [Third-party code and model terms](THIRD_PARTY.md)
+## 7. Using the agent
+
+With **Live replies** enabled, eligible finalized turns are submitted automatically. Drafts never submit. Switch it off to review, edit and send manually. An inherited chunk hold stays blocking through final turn assembly; it can hold a correct reading too. Correct the text or repeat the phrase, then explicitly review/send it.
+
+**Compare readings** chooses among existing candidates when at least two supported alternatives exist. Selection changes the caption display only; explicitly review/send that selection to create a request with those exact words. It does not revise an existing task. **Cancel and edit** cancels a selected active task, opens its text for editing, and sends the replacement under a new UUID. Old confirmations cannot execute cancelled details. **Misread · ignore** excludes a finished mistaken request from future context; cancel active work first. Completed receipts remain truthful. Typed requests use the same planner and tools and help separate tool problems from recognition errors.
+
+| Tool | Behavior |
+| --- | --- |
+| `save_note` | Propose saving local note text; confirm exact details |
+| `start_timer` | Propose a labeled timer of 1 to 86,400 seconds; confirm exact details |
+| `list_notes` | Read local notes |
+| `list_timers` | Read persisted timers/countdowns |
+| `calculate` | Evaluate bounded arithmetic with the local calculator |
+| `research` | Produce a report with actual web sources using the supported adapter |
+| `open_page` | Display a public-page preview/link; some sites block embedding |
+| `draft_document` | Produce an inert Markdown draft with preview, copy and download |
+
+Notes and timers execute only after explicit detail confirmation. Read-only tools complete directly. Plans use a local allowlist and argument validation; a proposal is not an executed receipt. Repeated submission with the same UUID/input and repeated confirmation are idempotent.
+
+## 8. Background tasks and cancelling
+
+Up to three tasks run concurrently by default. Additional tasks wait in order; capacity is twelve queued or running jobs. Pending confirmations do not consume running slots and wait indefinitely for you to act. Every eligible finished turn is an independent task, including an older turn that finishes decoding after you start another.
+
+Speaking never cancels tasks or pending confirmations. It stops generated audio playback only. Each queued, thinking, researching or review task has **Cancel**. **Stop all** cancels all active work and unsent client requests. Cancellation stops the local provider await and rejects late results; it cannot guarantee a remote provider stops processing or billing. Completed actions are not undone.
+
+Tasks survive closing the browser while the computer service remains running. On service restart, queued tasks resume, pending confirmations remain, and in-flight calls become failed for explicit retry. Each task sees up to four completed earlier tasks as context without waiting for siblings still running. Concurrency means jobs within one server, not multiple server workers.
+
+## 9. Studio
+
+Open Studio, choose 9:16 or 16:9, then **Record clip**. Recording captures up to 45 seconds of the real camera canvas with labeled predictions and agent state/results. You can review requests while recording. Optional generated voice is mixed in only when played; microphone audio is never added.
+
+Stop recording and download the MP4. Server conversion uses FFmpeg; if conversion fails, the original supported browser format remains downloadable, often WebM. Browser recorder support varies. Play back the file before sharing. Settings dialogs, keys and connection URLs are outside the recorded canvas; visible captions and task details are personal data.
+
+## 10. Measuring accuracy
+
+Collect consented clips before tuning. The [recording protocol](docs/RECORDING.md) provides 20 validation and 30 held-out prompts across three speakers, including genuinely silent mouthing, voiced speech, names, numbers, negations and natural controls. Copy the [validation](docs/examples/recording-validation.template.jsonl) and [held-out](docs/examples/recording-heldout.template.jsonl) templates into private `evaluation-data/`, update paths and verify labels. Keep held-out speakers and sentences excluded from tuning. Keep context identical and available before inference; references never reach recognition.
+
+```sh
+# Current full-demo baseline:
+.venv/bin/python scripts/evaluate.py evaluation-data/heldout.jsonl \
+  --validation-manifest evaluation-data/validation.jsonl --report .runtime/baseline.json
+# Clips must contain an actual final pause:
+.venv/bin/python scripts/evaluate.py evaluation-data/heldout.jsonl \
+  --endpoint natural --report .runtime/natural.json
+# One change on a separate service, same clips/context:
+.venv/bin/python scripts/evaluate.py evaluation-data/heldout.jsonl \
+  --server http://127.0.0.1:8766 --token-file path/to/experiment/access-token \
+  --compare .runtime/baseline.json --report .runtime/changed.json
+# Existing candidate selector ablation:
+.venv/bin/python scripts/evaluate.py evaluation-data/heldout.jsonl \
+  --assist --report .runtime/selector.json
+# Dry-run command intent; matching provider environment, no action execution:
+.venv/bin/python scripts/evaluate.py evaluation-data/heldout.jsonl \
+  --plan-intents --report .runtime/intents.json
+# Repeat delivery timings on an idle service:
+.venv/bin/python scripts/measure_latency.py path/to/consented-clip.mp4 \
+  --warmup 1 --runs 10 --report .runtime/latency.json
+```
+
+| Metric | Meaning |
+| --- | --- |
+| WER | Word substitutions, deletions and insertions divided by reference words |
+| Meaning-changing errors | Human annotations tied to exact predictions; unmeasured without review |
+| Critical-span errors | Exact count-change proxy for annotated names, numbers and negations |
+| Command-intent errors | Dry planner tool/annotated argument mismatch; not execution success |
+| Accepted-reading accuracy | Whole-clip exact match among fully accepted labeled clips |
+| Clarification frequency | Labeled clips with a hold or no final output |
+| No-speech false activation | Caption/auto-send eligibility on natural negative controls |
+| Delivery latency | Capture start to first draft/final, or last supplied frame to final |
+| Articulation-end latency | Final minus human-labeled speech end, when supplied |
+
+Reports include regressions from correct to wrong. Alternate baseline/change order with controlled warmup; measure agent replies and tool receipts separately from caption delivery. Thresholds need separate validation and held-out testing. [Canonical timing diagnostic](docs/BASELINE.md) and [metric/report reference](docs/EVALUATION.md).
+
+There is currently no redistributable, consent-verified public face-video fixture. Manifests are templates, not collected data. Supply your own consented recording; mark a reused diagnostic as `diagnostic` with `capture_kind: unknown` and `reference: null` when its source is unverified. Muted voiced footage and frozen tails do not establish silent-mouthing performance.
+
+## 11. Development and tests
+
+The lightweight suite requires no weights, camera or provider account. Install FFmpeg for conversion tests:
+
+```sh
+python3.11 -m venv .venv-test
+.venv-test/bin/python -m pip install -c constraints-test.txt -r requirements-dev.txt
+.venv-test/bin/python -m unittest discover -s tests -v
+.venv-test/bin/ruff check .
+.venv-test/bin/ruff format --check .
+npm --prefix phone-app ci
+npm --prefix phone-app test
+npm --prefix phone-app run format:check
+```
+
+CI runs these checks on Python 3.11 and Node 22 on Linux. Tests isolate runtime files in temporary directories. Frontend code is maintained directly in `phone-app/dist`, with no build framework. Use the full installation for integration scripts, which may incur usage charges:
+
+| Script | Purpose |
+| --- | --- |
+| `scripts/setup.py` | Download/verify the pinned code and assets |
+| `scripts/doctor.py` | Check executables, dependencies and assets |
+| `scripts/serve.py` | Foreground model server and temporary phone tunnel |
+| `scripts/service.py` | Detached launcher start/status/restart/stop |
+| `scripts/phone_link.py` | Connected link/QR for an existing HTTPS tunnel |
+| `scripts/smoke_video.py` | Replay a consented clip over the camera socket; assert protocol and visual utterance |
+| `scripts/measure_latency.py` | Warmup plus repeated timing distributions |
+| `scripts/evaluate.py` | Replay, score and compare labeled clips without executing actions |
+| `scripts/eval_metrics.py` | Imported metric/report helpers; no standalone CLI |
+| `scripts/check_agent.py` | Actual planner/tool checks in an isolated temporary database |
+| `scripts/check_harness_http.py` | Actual HTTP calculator request, removing only its own test job; same checkout/store as service |
+| `scripts/check_studio.py` | Authenticated status and optional supplied synthetic-video conversion |
+| `scripts/check_speech.py` | Explicit text-only speech sample saved as `.runtime/voice-test.wav` |
+| `scripts/benchmark.py` | Device/window microprofile; not accuracy measurement |
+| `scripts/profile_cache.py` | Compare detection-cache work on a supplied clip |
+| `scripts/package_source.py` | Allowlisted source archive excluding private/runtime/model data |
+
+Examples on a development service:
+
+```sh
+.venv/bin/python scripts/smoke_video.py path/to/consented-clip.mp4 --mode live
+.venv/bin/python scripts/check_agent.py
+.venv/bin/python scripts/check_harness_http.py http://127.0.0.1:8765
+.venv/bin/python scripts/check_studio.py --fixture path/to/synthetic.webm
+.venv/bin/python scripts/check_speech.py
+.venv/bin/python scripts/profile_cache.py path/to/consented-clip.mp4
+.venv/bin/python scripts/benchmark.py path/to/consented-clip.mp4
+.venv/bin/python scripts/package_source.py
+```
+
+Smoke/timing/evaluation accept `--server`, `--token-file` and `--report` for isolated instances. Other HTTP checks assume the same checkout's default runtime token/store. [Contributor guide](CONTRIBUTING.md), [development reference](docs/DEVELOPMENT.md).
+
+## 12. Troubleshooting
+
+| Symptom | Next step |
+| --- | --- |
+| Camera stays disabled | Wait for startup, run doctor, inspect `.runtime/server.log` locally |
+| Phone cannot connect | Keep the computer awake and reopen the newest HTTPS link |
+| Access denied | Use this installation's app key, not a provider API key |
+| Camera permission missing | Allow camera on the HTTPS page and keep it visible |
+| Port 8765 occupied | Stop the existing project launcher before starting another |
+| Torch import failure | Install matching torch/vision/audio builds for Python 3.11 |
+| Asset or vendor mismatch | Preserve edits; verify hashes and use asset repair deliberately |
+| Caption inaccurate or delayed | Improve framing, shorten the phrase, finish manually, then evaluate labeled clips |
+| Provider request rejected | Check protocol, endpoint, model, quota and explicit key for that endpoint |
+| Export fails | Check FFmpeg and clip limits; download the original browser recording |
+
+[More troubleshooting](docs/TROUBLESHOOTING.md). Include sanitized versions and a minimal reproduction in issues; exclude private URLs, keys, footage and databases.
+
+## 13. Privacy and security
+
+Camera-only means recognition receives no microphone input. Frames cross the HTTPS tunnel to the computer, where recognition and transient buffers use RAM. The tunnel relays those frames. Explicit Studio recordings live in browser memory until downloaded; conversion uses temporary files removed afterward. Evaluation retains the source clips/reports you choose to save.
+
+| Data | Destination and retention |
+| --- | --- |
+| Final submitted/reviewed/typed text, plans, replies, receipts, notes, timers | `.runtime/agent.sqlite3`; persists across restarts |
+| Up to four completed earlier tasks | Selected text provider as conversation context |
+| Candidate comparison text and fixed user context | Selected text provider on explicit assistance |
+| Research question and research context | Supported hosted research/search integration |
+| Caption text for optional speech | Included hosted speech integration |
+| Provider key | Process memory; environment can reload it after restart |
+| App token, private links/QR, logs | `.runtime/`; links grant service access |
+| Explicit recordings and evaluation clips | Your chosen local download/data paths |
+
+Anyone holding the app link/token can use this single-user service. Tokens have no automatic expiry or rotation API. To revoke a link, stop the service, remove `.runtime/access-token` deliberately, restart to generate a new token, and reconnect using the new link. Old browsers retain the old token until reconnected. Stopping/restarting the tunnel alone changes the address, not the token. Remove old QR/link files and clear browser session storage on shared devices.
+
+To delete local jobs, plans, notes, timers and receipts, stop the service first and remove `.runtime/agent.sqlite3` and any matching SQLite sidecar files. This discards recovery/history and does not undo external processing. Delete downloaded recordings, evaluator clips/reports and logs separately from their saved paths. Disconnect clears the active provider key; revoke a leaked credential at the provider. Local deletion does not remove provider-retained data. `.runtime/` and recordings are excluded from Git/source packages; they are not encrypted at rest by this app. See [security boundaries/reporting](SECURITY.md) and [status](#1-what-it-is).
+
+## 14. Architecture overview
+
+```mermaid
+flowchart TD
+    Camera[Phone camera: JPEGs, no audio] --> Socket[Authenticated StreamSession / bounded buffer]
+    Socket --> Quality[Framing executor]
+    Socket --> Mouth[Lip-activity executor / visual pause]
+    Socket --> Inference[Single inference executor + lock]
+    Inference --> Decoder[Auto-AVSR / CTC draft / trained-LM beam]
+    Decoder --> Assembly[Utterances / alternatives / blocking holds]
+    Mouth --> Assembly
+    Assembly --> UI[Captions / explicit review and correction]
+    UI --> Queue[UUID-bound durable job queue]
+    Queue --> Workers[Up to N concurrent agent tasks]
+    Workers --> Provider[Replaceable text provider / validated plan]
+    Provider --> Read[Answer / read-only tools]
+    Provider --> Confirm[Pending note/timer detail confirmation]
+    Confirm --> Store[SQLite effects + receipts]
+    Read --> Store
+    Store --> UI
+    UI --> Cancel[Explicit Cancel / Stop all]
+    Cancel --> Workers
+    Mouth --> Audio[Stop generated audio only]
+```
+
+| Module | Responsibility |
+| --- | --- |
+| `server.py`, `runtime.py`, `config.py` | HTTP/auth, startup-owned resources, shared timing/protocol and concurrency |
+| `stream_session.py`, `stream_buffer.py` | Camera scheduling and bounded consume-once frames |
+| `engine.py`, `turn_taking.py`, `recognition_guard.py` | Recognition, visual endpoints, assembly and existing heuristics |
+| `provider.py`, `agent.py`, `web_results.py` | Provider protocols, durable jobs/tools, cited report validation |
+| `speech.py`, `video_export.py` | Optional caption speech and recording conversion |
+| `phone-app/dist/` | Buildless camera, review, work-card and Studio interface |
+
+Imports do not create runtime files; application lifespan owns initialization. SQLite calls from async routes/tasks run off the event loop. Terminal guards reject late cancellation results, and local writes/receipts commit together. [Full route and state reference](docs/ARCHITECTURE.md).
+
+## 15. License and third-party terms
+
+Original adapter, transport, interface, evaluation and agent code is [MIT](LICENSE). Recognition relies on separately downloaded Chaplin/Auto-AVSR, decoder and MediaPipe assets. Code licenses do not grant blanket rights to weights or training datasets. Exact component roles, hashes, known provenance and unresolved weight/data terms are in [model provenance](docs/MODELS.md) and [third-party notices](THIRD_PARTY.md). No user footage or model weights are shipped in the source archive.

@@ -1,6 +1,6 @@
 # Evaluate the existing demo
 
-The evaluator is offline tooling around the existing socket, candidate selector and planner. It does not change the live camera UI, enable a model, execute actions, or save provider keys. Run it against an idle service. It opens camera sessions with `conversation: false`, so test mouth movements do not interrupt real jobs. It never calls `/api/agent/jobs` or confirmation endpoints.
+The evaluator is offline tooling around the existing socket, candidate selector and planner. It does not change the live camera UI, enable a model, execute actions, or save provider keys. Run it against an idle service. It opens camera sessions with `conversation: false`, and never submit agent jobs. It never calls `/api/agent/jobs` or confirmation endpoints.
 
 ## Data and leakage
 

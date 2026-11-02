@@ -18,4 +18,4 @@ Research returns a source-linked report. Open page returns a sandboxed preview a
 
 Research uses the included Responses web-search adapter. Other text connections need an equivalent research adapter and expose capability availability through `/api/provider/config`. Example requests include "Research NASA's explanation of the Moon's phases", "Draft a weekend project plan" and "Open https://example.com". Typed requests test tools separately from recognition.
 
-[Project limitations](../README.md#limitations) and [measurement methods](BASELINE.md) define the current evidence boundaries. Device checks should cover missed pauses, false interruptions, reconnect, page embedding, downloads and Studio audio behavior.
+[Project limitations](../README.md#1-what-it-is) and [measurement methods](BASELINE.md) define the current evidence boundaries. Device checks should cover missed pauses, false activity starts, reconnect, page embedding, downloads and Studio audio behavior.

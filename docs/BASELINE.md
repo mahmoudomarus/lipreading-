@@ -1,16 +1,24 @@
 # Baseline and reproducible measurements
 
-## Reference timing diagnostic
+## Branch timing diagnostic
 
-One previously used development clip was replayed through the reference deployment after one discarded warmup, followed by ten measured runs. Capture used the production JPEG socket in live mode, explicit Finish at EOF, 25 FPS source timing, quality 90 and an 800 pixel maximum edge. Recognition used CPU, four threads, fast beam 4, detailed beam 12, CTC weight 0.1 and language-model weight 0.3. Each replay began a fresh camera session and submitted no agent jobs.
+The current runtime at source revision `a909f1b2dbfd76699ee6255512b8d542a21b9b9c` was checked on an Apple M1 with 8 GiB RAM, macOS 27.0.1 arm64 and Python 3.11.11. Recognition used CPU, four threads, live beam 4, phrase beam 12, CTC weight 0.1, trained-LM weight 0.3 and detection caching. PyTorch/vision/audio were 2.11.0 / 0.26.0 / 2.11.0, MediaPipe 1.2.0 and NumPy 2.4.4. Full package versions, source-file fingerprints, pinned vendor revision and all six asset hashes accompany the [per-run report](examples/latency-diagnostic.json).
 
-| Delivery interval | Median seconds | p95 seconds | Range seconds |
+One reused development clip was replayed over a localhost WebSocket, with no phone, browser, Wi-Fi or tunnel. After a cold smoke and one discarded warmup, ten runs used the same process with no agent workload. Each session sent only JPEGs at 25 FPS, quality 90, maximum edge 800, and explicit Finish at EOF. The last frame was at 2.960 seconds. Results describe delivery at the replay client, not pure model time or articulation-end latency.
+
+| Delivery interval | Median seconds | Nearest-rank p95 seconds | Range seconds |
 | --- | --- | --- | --- |
-| Capture start to first draft | 1.968 | 2.224 | 1.823–2.224 |
-| Capture start to final turn | 4.544 | 5.673 | 4.310–5.673 |
-| Last captured frame to final turn | 1.584 | 2.713 | 1.350–2.713 |
+| Capture start to first draft | 2.228 | 4.102 | 1.970 to 4.102 |
+| Capture start to final turn | 5.677 | 7.479 | 4.575 to 7.479 |
+| Last supplied frame to final turn | 2.717 | 4.519 | 1.615 to 4.519 |
 
-The last supplied frame was at 2.960 seconds. The output was the same across all measured runs. [Per-run timings, clip hash and configuration](examples/latency-diagnostic.json) distinguish this reference diagnostic from future experiments. These numbers do not benchmark the refactored session implementation or a physical phone connection. The source clip has no verified transcript; its development reuse excludes it from held-out accuracy evaluation. [Project limitations](../README.md#limitations).
+All ten runs produced `THE SUNRISE WOULD BE TOO SOON`; there were no no-output runs or socket errors. With only ten observations, nearest-rank p95 is the maximum and is not a stable population tail estimate. The first cold smoke delivered its first draft at 8.437 s and final at 14.444 s; it is excluded from the table. Capture kind, intended reference and redistribution permission for this preexisting clip are unverified. It is excluded from accuracy scoring and is not redistributed.
+
+The earlier reference deployment had medians of 1.968 s / 4.544 s / 1.584 s at those same boundaries. This branch's observed run was slower. The runs were not alternating paired measurements under controlled machine load, so no causal speedup or slowdown is attributed to the patches. Investigate performance before claiming no unacceptable latency regression. [Accuracy and device limits](../README.md#1-what-it-is).
+
+## Agent integration diagnostic
+
+The same branch with the configured Responses text model `gpt-6.1-sol` completed a calculator request at 5.000 s while an earlier research request continued to 11.674 s. Both used the production authenticated HTTP path and returned tool receipts. A separate actual research request was cancelled while `researching` and remained cancelled after five seconds. These are single integration observations demonstrating concurrency/cancellation, not a representative agent-latency benchmark. No recognition-to-command accuracy follows from typed requests.
 
 ## Reproduce a timing report
 

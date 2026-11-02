@@ -68,21 +68,7 @@ export AGENT_MODEL=your-installed-model
 
 `localhost` refers to the computer running the Python service, not the phone. Local Ollama/LM Studio-style compatible endpoints can use this arrangement. Hosted compatible endpoints use HTTPS and normally need `AGENT_API_KEY`. Use the provider's current endpoint and model ID. The frontend is provider-neutral; the included adapters do not cover every proprietary protocol.
 
-| Variable | Meaning |
-| --- | --- |
-| `AGENT_PROTOCOL` | `responses` or `chat` |
-| `AGENT_BASE_URL` | API base, such as a compatible endpoint ending in `/v1` |
-| `AGENT_MODEL` | Exact model ID supported by that endpoint |
-| `AGENT_MAX_CONCURRENT_JOBS` | Concurrent agent tasks, 1 to 12, default 3 |
-| `AGENT_API_KEY` | Optional local-server key or required hosted-provider key |
-| `LIPREAD_DEVICE` | `cpu` (default), `auto`, or experimental `mps` |
-| `LIPREAD_THREADS` | CPU threads; default 4 |
-| `LIPREAD_BEAM` / `LIPREAD_FAST_BEAM` | Detailed/live decoding beams; default 12 / 4 |
-| `LIPREAD_SITE_ORIGIN` | Optional exact origin of a separately hosted static frontend |
-
-`.env.example` is documentation, not an automatically loaded file. Set variables in the server process environment and never commit real values. Existing installations may still use `OPENAI_API_KEY`, `AGENT_MODEL`, and `AGENT_VOICE_MODEL`. The legacy key fallback applies only to its matching default endpoint. A changed endpoint requires an explicit new key. Generic environment variables take priority where applicable. The default hosted text adapter currently uses `gpt-6.1-sol` with low reasoning effort; it is a stronger, higher-cost conversation model than the earlier Luna default. It is not necessary to use that provider or model.
-
-Optional context assistance selects among existing visual hypotheses, without verifying them. Optional generated speech currently has one included adapter using `gpt-realtime-2.1-mini`; it is unavailable for other text endpoints. Its transcript must match the requested caption before playback. Neither speech output nor the text agent makes the visual model more accurate by itself.
+The complete setting table and local/hosted examples are maintained in [README section 6](../README.md#6-connect-a-text-model). `.env.example` is documentation rather than an automatically loaded file. Optional candidate assistance selects existing readings; optional speech uses the included text-only adapter.
 
 ## Background computer operation
 

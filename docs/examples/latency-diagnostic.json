@@ -1,101 +1,227 @@
 {
-  "recorded_date": "2026-11-01",
-  "configuration": {
-    "device": "cpu",
-    "threads": 4,
-    "fast_beam": 4,
-    "detailed_beam": 12,
-    "ctc_weight": 0.1,
-    "lm_weight": 0.3,
-    "jpeg_quality": 90,
-    "resize_long_edge": 800,
-    "endpoint": "finish",
-    "transport": "local WebSocket",
-    "mode": "live"
-  },
   "video_sha256": "3bb8cffd51399caaf0c97abcd32bcab3493b2878ffda73bd648490ea47c75cc0",
-  "last_frame_seconds": 2.96,
   "runs": 10,
   "warmup_discarded": 1,
+  "mode": "live",
+  "endpoint": "finish",
+  "jpeg_quality": 90,
+  "resize_long_edge": 800,
+  "server_status": {
+    "status": "ready",
+    "detail": "Ready to read",
+    "model": "Auto-AVSR",
+    "audio": false,
+    "device": "cpu",
+    "draft_after_seconds": 1.35,
+    "active_session": false,
+    "version": 4,
+    "agent_configured": true,
+    "visual_turns": true
+  },
   "latency_seconds": {
     "first_draft_seconds": {
       "n": 10,
-      "median": 1.968130853958428,
-      "p95": 2.2237609160365537,
-      "min": 1.8231874579796568,
-      "max": 2.2237609160365537
+      "median": 2.2280087915132754,
+      "p95": 4.102170916972682,
+      "min": 1.9696949999779463,
+      "max": 4.102170916972682
     },
     "final_from_start_seconds": {
       "n": 10,
-      "median": 4.54376102052629,
-      "p95": 5.67331949993968,
-      "min": 4.310235958080739,
-      "max": 5.67331949993968
+      "median": 5.676793979480863,
+      "p95": 7.4790550420293584,
+      "min": 4.575195417040959,
+      "max": 7.4790550420293584
     },
     "final_after_last_frame_seconds": {
       "n": 10,
-      "median": 1.58376102052629,
-      "p95": 2.71331949993968,
-      "min": 1.3502359580807388,
-      "max": 2.71331949993968
+      "median": 2.7167939794808627,
+      "p95": 4.5190550420293585,
+      "min": 1.615195417040959,
+      "max": 4.5190550420293585
     }
   },
-  "timing_runs": [
-    {
-      "first_draft_seconds": 2.2237609160365537,
-      "final_from_start_seconds": 5.182238665991463,
-      "final_after_last_frame_seconds": 2.222238665991463
-    },
-    {
-      "first_draft_seconds": 2.0468686249805614,
-      "final_from_start_seconds": 4.370423583895899,
-      "final_after_last_frame_seconds": 1.4104235838958994
-    },
-    {
-      "first_draft_seconds": 1.8231874579796568,
-      "final_from_start_seconds": 4.342125957948156,
-      "final_after_last_frame_seconds": 1.3821259579481557
-    },
-    {
-      "first_draft_seconds": 1.9258895829552785,
-      "final_from_start_seconds": 4.647956707980484,
-      "final_after_last_frame_seconds": 1.6879567079804838
-    },
-    {
-      "first_draft_seconds": 2.0103721249615774,
-      "final_from_start_seconds": 5.577069374965504,
-      "final_after_last_frame_seconds": 2.617069374965504
-    },
-    {
-      "first_draft_seconds": 2.1074610830983147,
-      "final_from_start_seconds": 4.439565333072096,
-      "final_after_last_frame_seconds": 1.4795653330720961
-    },
-    {
-      "first_draft_seconds": 1.8421370419673622,
-      "final_from_start_seconds": 4.363169249962084,
-      "final_after_last_frame_seconds": 1.403169249962084
-    },
-    {
-      "first_draft_seconds": 1.8392178330104798,
-      "final_from_start_seconds": 4.310235958080739,
-      "final_after_last_frame_seconds": 1.3502359580807388
-    },
-    {
-      "first_draft_seconds": 1.8647385840304196,
-      "final_from_start_seconds": 5.67331949993968,
-      "final_after_last_frame_seconds": 2.71331949993968
-    },
-    {
-      "first_draft_seconds": 2.013600791920908,
-      "final_from_start_seconds": 5.010712624993175,
-      "final_after_last_frame_seconds": 2.0507126249931753
-    }
-  ],
   "distinct_predictions": [
     "THE SUNRISE WOULD BE TOO SOON"
   ],
-  "reference_transcript": null,
-  "capture_kind": "unknown",
-  "scope": "Reference deployment timing only; one reused development clip; refactored application and physical phone interaction not benchmarked by this run."
+  "environment": {
+    "measured_at_utc": "2026-11-02T00:22:40.399148+00:00",
+    "source_revision": "a909f1b2dbfd76699ee6255512b8d542a21b9b9c",
+    "source_clean_at_model_start": true,
+    "machine": {
+      "system": "macOS-27.0.1-arm64-arm-64bit",
+      "architecture": "arm64",
+      "cpu": "Apple M1",
+      "memory_bytes": 8589934592
+    },
+    "python": "3.11.11 (main, Jan 17 2025, 17:22:13) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "packages": {
+      "torch": "2.11.0",
+      "torchvision": "0.26.0",
+      "torchaudio": "2.11.0",
+      "mediapipe": "1.2.0",
+      "numpy": "2.4.4",
+      "opencv-python-headless": "4.13.0.92",
+      "fastapi": "0.115.0",
+      "starlette": "0.38.6",
+      "uvicorn": "0.30.6",
+      "httpx": "0.28.1",
+      "websockets": "15.0.1",
+      "scikit-image": "0.26.0",
+      "sentencepiece": "0.2.2",
+      "av": "17.0.0",
+      "Pillow": "11.1.0"
+    },
+    "inference": {
+      "device": "cpu",
+      "threads": 4,
+      "live_beam": 4,
+      "phrase_beam": 12,
+      "ctc_weight": 0.1,
+      "lm_weight": 0.3,
+      "detection_cache": true,
+      "visual_turns": true,
+      "protocol": 4
+    },
+    "capture": {
+      "kind": "file replay",
+      "phone": null,
+      "browser": null,
+      "connection": "localhost WebSocket, no tunnel or Wi-Fi",
+      "video_sha256": "3bb8cffd51399caaf0c97abcd32bcab3493b2878ffda73bd648490ea47c75cc0",
+      "provenance": "preexisting development diagnostic, reference and redistribution consent unverified",
+      "source_fps": 25,
+      "last_frame_seconds": 2.96,
+      "jpeg_quality": 90,
+      "max_edge": 800,
+      "audio_sent": false,
+      "endpoint": "explicit Finish at EOF",
+      "background_agent_work": "none during timing"
+    },
+    "process_state": "cold smoke first, then 1 discarded warmup and 10 repeated runs in same process",
+    "assets": {
+      "vendor": {
+        "url": "https://github.com/amanvirparhar/chaplin.git",
+        "revision": "7aee1f8fca776ce4f63690063310b53573b7d804"
+      },
+      "models": [
+        {
+          "name": "vsr.pth",
+          "url": "https://huggingface.co/Amanvir/LRS3_V_WER19.1/resolve/main/model.pth",
+          "sha256": "e740cef369abeabd0ba2c18e37a0661342e1d94d432d6caa77755a11821d8fe3",
+          "bytes": 1001908942
+        },
+        {
+          "name": "vsr.json",
+          "url": "https://huggingface.co/Amanvir/LRS3_V_WER19.1/resolve/main/model.json",
+          "sha256": "e062e8c58579f54cb51087e639e674781189809905db4162efe0fe1325356d4f",
+          "bytes": 5512
+        },
+        {
+          "name": "lm.pth",
+          "url": "https://huggingface.co/Amanvir/lm_en_subword/resolve/main/model.pth",
+          "sha256": "c75aa39020dec98f432c8689b145d3f4cc407d4daa90a0c64202386c34f83c18",
+          "bytes": 215076928
+        },
+        {
+          "name": "lm.json",
+          "url": "https://huggingface.co/Amanvir/lm_en_subword/resolve/main/model.json",
+          "sha256": "6e2d2004e4066af3e5a3d74c53b0d648fd53904da07178671d1cbe28a206d548",
+          "bytes": 951
+        },
+        {
+          "name": "face_detector.tflite",
+          "url": "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite",
+          "sha256": "b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f",
+          "bytes": 229746
+        },
+        {
+          "name": "face_landmarker.task",
+          "url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+          "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+          "bytes": 3758596
+        }
+      ]
+    },
+    "source_file_sha256": {
+      "server.py": "2e1932ba19497520392031f9c3a6b878faf1a5c30b63b251a0812798fdc4d9d5",
+      "stream_buffer.py": "3fefd6fadeaa26e255dd207570b24a22973873dd807032e23ed7fe5f9f16a3c0",
+      "config.py": "4e242b55b984726d5ec847e13bc13aed5b96e3affd2ca0693caef0d0f597c6aa",
+      "provider.py": "65c2ca5bd6452719516f0dc9d9177fbd60e7a30b2b9e68317e8b43fb07ecc881",
+      "web_results.py": "8e38e1ee0bf1bbe5c4e69f997b2b1f367400c2eb11572852be45fb4fa3db0493",
+      "turn_taking.py": "e369df0dc7b3a08670efccc6e3b9e1a0ab793a2632ed60175c17c56223691710",
+      "recognition_guard.py": "2abe389dd8914f6a811427321c1546ebb0a75577c5c997961d13271dd7c7af20",
+      "runtime.py": "e2f4b9219650ce242ada1302397c6c165cac61bf47ee10763796ae2409e1189e",
+      "engine.py": "1033eb2b63ebef59dba5336c9bb1a795a4f2ab992e4e7cd9b166644d3a65ef81",
+      "agent.py": "894541f5c696908971ec83893e5e4e32d125fb521e97e5df5742aaf3932080d4",
+      "speech.py": "6bac206f552da84040c090befcf0ea960dedb91b5cb7b8324f88d14e849b242a",
+      "video_export.py": "dd6bb065c1cccd8ed8e37250092f7830e791252dce1eb33505e2375a07cbd718",
+      "stream_session.py": "327e68d5223746933d1db59725332be2daa8419d02206fa5d8aefa495f264d6d"
+    },
+    "accuracy_claim": null
+  },
+  "runs_with_no_final_output": 0,
+  "errors": 0,
+  "per_run_seconds": [
+    {
+      "first_draft_seconds": 2.4588746660156175,
+      "final_from_start_seconds": 6.124818540993147,
+      "final_after_last_frame_seconds": 3.1648185409931466,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 2.3705996250500903,
+      "final_from_start_seconds": 5.8011181249748915,
+      "final_after_last_frame_seconds": 2.8411181249748916,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 2.115419500041753,
+      "final_from_start_seconds": 5.230735499993898,
+      "final_after_last_frame_seconds": 2.270735499993898,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 2.2374278330244124,
+      "final_from_start_seconds": 5.065727167064324,
+      "final_after_last_frame_seconds": 2.105727167064324,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 4.102170916972682,
+      "final_from_start_seconds": 7.4790550420293584,
+      "final_after_last_frame_seconds": 4.5190550420293585,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 2.2185897500021383,
+      "final_from_start_seconds": 6.623530959011987,
+      "final_after_last_frame_seconds": 3.663530959011987,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 2.168632833985612,
+      "final_from_start_seconds": 5.552469833986834,
+      "final_after_last_frame_seconds": 2.5924698339868337,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 1.9978889590129256,
+      "final_from_start_seconds": 4.715473416959867,
+      "final_after_last_frame_seconds": 1.755473416959867,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 1.9696949999779463,
+      "final_from_start_seconds": 4.575195417040959,
+      "final_after_last_frame_seconds": 1.615195417040959,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    },
+    {
+      "first_draft_seconds": 2.636779792024754,
+      "final_from_start_seconds": 6.009809499955736,
+      "final_after_last_frame_seconds": 3.049809499955736,
+      "prediction": "THE SUNRISE WOULD BE TOO SOON"
+    }
+  ]
 }

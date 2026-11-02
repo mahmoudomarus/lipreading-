@@ -11,7 +11,7 @@ python3.11 -m venv .venv
 node --test phone-app/tests/*.test.mjs
 ```
 
-Install FFmpeg first; conversion tests use synthetic recordings. Node 22 is the CI baseline. No npm install, GPU, camera, provider account, vendor checkout, or model weights are required. `.github/workflows/checks.yml` runs these checks. Real integration checks are intentionally not part of CI: they need credentials/hardware and can incur charges.
+Install FFmpeg first; conversion tests use synthetic recordings. Node 22 is the CI baseline. The tests require no GPU, camera, provider account, vendor checkout or model weights. Formatting requires `npm ci` in `phone-app` and the development requirements. `.github/workflows/checks.yml` runs these checks. Real integration checks are intentionally not part of CI: they need credentials/hardware and can incur charges.
 
 The frontend is maintained directly in `phone-app/dist`. Serve through `server.py` for the real authenticated app. A static server can preview markup but cannot perform recognition or agent actions. Localhost camera permissions and phone HTTPS access are different environments.
 

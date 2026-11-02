@@ -9,7 +9,7 @@ Run background jobs concurrently with a configurable default limit of three. Spe
 Correct action previews and reject malformed camera control values. Preserve drafts, alternatives and review holds across visual turns. Extract startup-owned runtime resources and a testable camera session. Enforce lint in CI, retain failed plans, account for research in queue bounds and report launcher timeouts as failures. See `docs/BASELINE.md` for repeated timing measurements and `docs/RECORDING.md` for the first labeled evaluation protocol.
 
 
-Add local lip-shape turn detection, pause-based utterance assembly, interruption of in-flight requests, stale-turn rejection, cited web research, sandboxed page cards, and downloadable Markdown drafts. See `docs/TURN_TAKING.md` for implemented behavior and limits.
+Add local lip-shape turn detection, pause-based utterance assembly, cited web research, sandboxed page cards, and downloadable Markdown drafts. See `docs/TURN_TAKING.md` for implemented behavior and limits.
 
 Prevent empty visual drafts from triggering fluent beam-decoder guesses; hold repetitive, unsupported and recent duplicate long readings. Add silence abstention and Misread dismissal with context isolation. Pace camera delivery to 25 FPS without reducing sensor cadence to 15 FPS. Upgrade the default conversation model to GPT-6.1 Sol with low reasoning effort; text provider remains replaceable.
 

@@ -15,7 +15,9 @@ Lipread Lab is a single-user research prototype, not an audited production servi
 
 Use one uvicorn process/worker. Keep the computer and private link under your control. The app has bounded frame/request sizes, serialized camera/model access, a tool allowlist, confirmation for writes and transactional local receipts. These controls do not establish recognition accuracy or make arbitrary future external tools safe.
 
-Disconnecting a provider clears its session key; an already-sent request cannot be recalled. Restarting can reload credentials from the process environment. To remove local personal data, stop the service first, then back up or remove the relevant `.runtime/` files deliberately. Changing an app token also requires reopening/reconnecting private links. Revoke a leaked provider key with its provider.
+The complete retention, deletion and token-revocation procedures are in [README section 13](README.md#13-privacy-and-security). The token has no automatic expiry or rotation API. Stop the service before replacing it or deleting SQLite data; removing a token file while the old process is running does not revoke its in-memory token. Local deletion does not remove provider-retained data. Storage is not encrypted by the app.
+
+CSP enforcement remains open pending page-preview, Studio and target-phone verification. Existing response headers restrict microphone permission, prevent referrer leakage and MIME sniffing, and disable caching; they do not substitute for a CSP or a security audit.
 
 ## Reporting a vulnerability
 

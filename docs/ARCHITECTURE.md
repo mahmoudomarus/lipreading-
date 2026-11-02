@@ -15,7 +15,7 @@
 | Structured text provider adapter | `provider.py` |
 | Durable jobs, validated tools and receipts | `agent.py` |
 | Cited report and public-link validation | `web_results.py` |
-| Optional speech and compatibility adapter | `speech.py` |
+| Optional generated-caption speech adapter | `speech.py` |
 | Recording conversion | `video_export.py` |
 | Buildless browser application | `phone-app/dist/` |
 
@@ -38,7 +38,7 @@ Phone video without audio
 
 The browser paces distinct frames toward 25 FPS, resizes to 800 pixels and applies backpressure. Packets contain an eight-byte little-endian float64 capture timestamp and JPEG bytes. The backend validates size, dimensions and timing. Finalized frames are consumed once while later frames remain buffered. Protocol version and draft timing come from `config.py`; HTTP status and the connected event use the same version.
 
-The recognizer repeatedly processes offline windows. The advice thresholds for face size and head angle are stricter than rejection thresholds so the UI can suggest improvements before capture fails. [Recognition limitations](../README.md#limitations).
+The recognizer repeatedly processes offline windows. The advice thresholds for face size and head angle are stricter than rejection thresholds so the UI can suggest improvements before capture fails. [Recognition limitations](../README.md#1-what-it-is).
 
 Single-part turns retain their native alternatives. Multi-part turns keep earlier best readings and substitute only alternatives from the last part, with at most two distinct full-turn alternatives. Drafts are joined only when every part supplied real draft text. A held part keeps the complete turn held. Manual comparison uses the existing text selector and is disabled when no distinct supported candidate exists. Automatic selection is not enabled on assembled visual turns.
 
@@ -52,7 +52,7 @@ queued -> thinking -> completed                 answer or read-only tools
 queued -> cancelled
 queued, thinking, researching, review -> cancelled
 thinking, researching -> failed                 request failure or restart
-any automatic lip job -> dismissed              excluded from future context
+finished automatic lip job -> dismissed         excluded from future context
 ```
 
 A UUID identifies each input. Same UUID and input returns the existing job; changed input is rejected. Plans are validated against a local tool allowlist and argument bounds. Notes and timers require explicit confirmation. Local effects and their receipts commit in one SQLite transaction. Repeated confirmation returns the completed result. Plans remain available after failures. Research jobs count toward the queue limit.
@@ -69,6 +69,7 @@ All API HTTP routes require the app bearer token. Camera authentication occurs i
 
 | Route | Purpose |
 | --- | --- |
+| `GET /` and static files | Camera application, no bearer required |
 | `GET /api/status` | Readiness and capabilities |
 | `WS /api/stream` | Camera packets, caption/activity events and controls |
 | `GET/POST/DELETE /api/provider/config` | Provider connection without returning its key |
@@ -83,3 +84,7 @@ All API HTTP routes require the app bearer token. Camera authentication occurs i
 ## Extend existing components
 
 Add provider protocols in `provider.py`, retaining server-side keys and local plan validation. Add tools through schema, validator, executor, receipt labels and tests together. Remote writes require idempotency and reconciliation beyond local transactions. Preserve the video-only protocol, real timing and abstention semantics when investigating recognition changes. Evaluate a measured gap before adding model or framework dependencies.
+
+## Shared configuration
+
+`config.py` defines protocol 4, first draft context 1.35 s, draft interval 0.9 s, minimum capture 0.7 s, maximum decode window 8.0 s, Phrase limit 7.8 s, buffer limit 9.8 s / 260 frames, and the validated concurrency limit (default 3, range 1 to 12). These are scheduling bounds, not measured delivery latency. Quality, mouth activity and recognition each have a separate single-thread executor; all agent tasks share one async worker with bounded concurrency. Failed scheduled camera work sends an error before closing the socket.

@@ -13,4 +13,4 @@ The implemented system uses windowed Auto-AVSR inference, a trained decoder lang
 
 Collect observed reference/prediction pairs before building a homophene map or changing decoding. Prioritize frequent errors and meaning-changing names, numbers and negations. Candidate oracle WER can reveal whether the correct reading already exists in the beam. Evaluate the existing selector before adding another layer. Model plausibility and self-reported confidence are not independent visual verification.
 
-Calibrate any acceptance thresholds on validation clips only, then measure accepted-reading accuracy versus clarification on excluded speakers and sentences. Preserve the full working demo as the main baseline. [Limitations](../README.md#limitations) are maintained centrally.
+Calibrate any acceptance thresholds on validation clips only, then measure accepted-reading accuracy versus clarification on excluded speakers and sentences. Preserve the full working demo as the main baseline. [Limitations](../README.md#1-what-it-is) are maintained centrally.

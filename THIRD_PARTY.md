@@ -9,3 +9,5 @@ The MIT license at this repository root covers this project's original adapter, 
 - FastAPI, Starlette, uvicorn, httpx, websockets, PyTorch, torchvision, torchaudio, OpenCV, NumPy, Pillow, scikit-image, SentencePiece, PyAV, and qrcode retain their individual licenses. FFmpeg is an external executable; build-dependent LGPL/GPL terms apply if you redistribute it.
 
 No training videos, user footage, credentials, or model weights are shipped in the source bundle.
+
+Exact download sources, byte counts, hashes, component roles and unverified weight/data terms are in [model provenance](docs/MODELS.md).
