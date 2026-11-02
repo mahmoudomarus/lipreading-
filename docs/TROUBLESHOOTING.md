@@ -14,6 +14,7 @@
 | Vendor revision differs | Preserve local edits; the installer intentionally does not reset an existing checkout |
 | Poor captions despite good light | The model can still misread silent speech. Compare held-out clips and framing; do not treat an LLM rewrite as verified transcription |
 | Camera closes after a stall | Read the retained close reason in the page and `Camera closed` in `.runtime/server.log`; `receive_timeout` means neither frames nor heartbeat arrived for 25 seconds |
+| FPS falls to zero | The counter measures frames queued for sending, independently of frame callbacks. Check camera delivery/backpressure; on the host computer use the direct computer link |
 | Long text delay | Keep phrases short and finish manually; measure capture/encoding/decoding/network stages. The current model is offline/windowed |
 | Provider connection rejected | Check protocol, base URL, model ID, quota and key. A new endpoint requires its own explicit key |
 | Local model unreachable from the phone | `localhost` in model settings refers to the Python computer. Confirm the model server is listening there |

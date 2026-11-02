@@ -13,3 +13,25 @@ export function createFramePacer(fps = 25) {
     },
   };
 }
+
+export function createFrameRateMeter() {
+  let frames = 0;
+  let last = 0;
+  return {
+    reset(now = 0) {
+      frames = 0;
+      last = now;
+    },
+    sent() {
+      frames++;
+    },
+    sample(now) {
+      const elapsed = now - last;
+      if (elapsed < 1000) return null;
+      const fps = Math.round((frames * 1000) / elapsed);
+      frames = 0;
+      last = now;
+      return fps;
+    },
+  };
+}

@@ -1,4 +1,4 @@
-import { createFramePacer } from './capture-pacer.js';
+import { createFramePacer, createFrameRateMeter } from './capture-pacer.js';
 import { createAgentUI } from './agent-ui.js';
 import {
   readConnection,
@@ -37,14 +37,13 @@ let encoding = false,
   segmentStart = 0,
   lastCapture = 0,
   lastMediaTime = -1;
-let frameCount = 0,
-  fpsStart = 0,
-  callbackId,
+let callbackId,
   sessionId,
   activeDraft,
   restartAfterStop = false;
 const finalized = new Set();
 const capturePacer = createFramePacer(25);
+const frameMeter = createFrameRateMeter();
 let adaptingVideo = false;
 let streamError = '';
 let visualTurns = false,
@@ -355,8 +354,8 @@ async function startCapture() {
     running = sending = true;
     connecting = finishing = false;
     sessionId = String(Date.now());
-    captureStart = segmentStart = fpsStart = performance.now();
-    frameCount = 0;
+    captureStart = segmentStart = performance.now();
+    frameMeter.reset(captureStart);
     capturePacer.reset(performance.now());
     adaptingVideo = false;
     lastCapture = 0;
@@ -451,18 +450,7 @@ function captureFrame(now, mediaTime) {
       encoding = false;
       if (!blob || !sending || socket?.readyState !== WebSocket.OPEN) return;
       socket.send(framePacket((now - captureStart) / 1000, blob));
-      frameCount++;
-      if (now - fpsStart >= 1000) {
-        const fps = Math.round((frameCount * 1000) / (now - fpsStart));
-        $('fps').textContent = fps + ' fps';
-        if (fps < 15)
-          status(
-            'Camera delivery is slow. Keep this tab open and improve the connection.',
-            'error',
-          );
-        fpsStart = now;
-        frameCount = 0;
-      }
+      frameMeter.sent();
     },
     'image/jpeg',
     0.9,
@@ -470,6 +458,12 @@ function captureFrame(now, mediaTime) {
 }
 function updateProgress() {
   if (!running) return;
+  const fps = frameMeter.sample(performance.now());
+  if (fps !== null) {
+    $('fps').textContent = fps + ' fps';
+    if (fps < 15 && !adaptingVideo)
+      status('Camera delivery is slow. Keep this tab open and improve the connection.', 'error');
+  }
   const elapsed = (performance.now() - segmentStart) / 1000;
   $('capture-progress').style.width = Math.min(100, (elapsed / 8) * 100) + '%';
   if (mode === 'phrase' && (performance.now() - captureStart) / 1000 >= 7.8) stopCapture();

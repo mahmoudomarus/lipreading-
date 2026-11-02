@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Update the camera send-rate display on a timer so stalled delivery reports zero instead of retaining a stale FPS value.
+
 Retain camera-stall errors across connection close/readiness updates and log session/decoder metadata without captions or keys. Report receive timeouts before closing.
 
 Print and save a private direct computer link separately from the phone tunnel link, so desktop-camera testing uses loopback.
