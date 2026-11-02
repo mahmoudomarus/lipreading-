@@ -68,6 +68,7 @@ def main():
         if child.poll() is not None:
             sys.exit("Service failed. See .runtime/service.log.")
         print("Background service started:", child.pid)
+        print("Computer link: .runtime/computer-url (direct local camera connection).")
         print("Phone link: .runtime/phone-url (wait for the tunnel). Computer must stay awake.")
     elif args.operation == "stop":
         if not pid:

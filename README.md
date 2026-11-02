@@ -112,7 +112,7 @@ Exact assets, roles and provenance are in [the model reference](docs/MODELS.md).
 .venv/bin/python scripts/service.py stop
 ```
 
-Use one launcher at a time. It binds `127.0.0.1:8765` and starts a temporary HTTPS tunnel. Model initialization continues after the web server starts; wait for Ready. The private link is printed and saved in `.runtime/phone-url`; the QR image is `.runtime/phone-qr.png`. Logs are `.runtime/server.log` and, for detached operation, `.runtime/service.log`. These can contain sensitive diagnostics and the private link.
+Use one launcher at a time. It binds `127.0.0.1:8765` and starts a temporary HTTPS tunnel. Model initialization continues after the web server starts; wait for Ready. For a camera on this same computer, use the printed **computer link**, saved in `.runtime/computer-url`; it connects directly to `127.0.0.1:8765`. For a phone, use the separate HTTPS link saved in `.runtime/phone-url` or QR image `.runtime/phone-qr.png`. Logs are `.runtime/server.log` and, for detached operation, `.runtime/service.log`. These can contain sensitive diagnostics and the private link.
 
 A tunnel restart changes its origin: reopen the newest link. Detached operation is not a login service and does not prevent sleep or restart on reboot. Change environment settings before restarting the process.
 
@@ -311,6 +311,7 @@ Smoke/timing/evaluation accept `--server`, `--token-file` and `--report` for iso
 | --- | --- |
 | Camera stays disabled | Wait for startup, run doctor, inspect `.runtime/server.log` locally |
 | Phone cannot connect | Keep the computer awake and reopen the newest HTTPS link |
+| Testing on the computer feels delayed through the phone link | Open `.runtime/computer-url` to use the direct local connection |
 | Access denied | Use this installation's app key, not a provider API key |
 | Camera permission missing | Allow camera on the HTTPS page and keep it visible |
 | Camera pauses when switching tabs | Return to the demo tab to resume capture; Stop reading disables automatic resume. Studio recording must be restarted explicitly |

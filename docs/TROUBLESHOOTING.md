@@ -4,6 +4,7 @@
 | --- | --- |
 | Camera button stays disabled | Wait for model startup; run `scripts/doctor.py`; inspect `.runtime/server.log` locally |
 | `cloudflared`, `ffmpeg` or `ffprobe` not found | Install that executable and make it available on the launcher's PATH |
+| Desktop camera uses the phone tunnel | Open the private computer link in `.runtime/computer-url` for a direct loopback connection |
 | Phone cannot connect | Keep the computer awake; reopen the newest printed HTTPS link; old tunnel origins stop working after restart |
 | Access denied | Use the app connection key/link from this installation, not a provider API key |
 | Camera permission missing | Open the HTTPS link in a supported browser, allow camera permission and keep the page visible |

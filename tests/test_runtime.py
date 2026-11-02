@@ -6,12 +6,27 @@ import unittest
 import uuid
 from pathlib import Path
 from unittest.mock import Mock
+from urllib.parse import parse_qs, urlsplit
 
 from runtime import Runtime
 from stream_session import StreamSession
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_computer_link_uses_loopback_and_preserves_the_private_app_key(self):
+        from scripts.serve import write_computer_link
+
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory)
+            (runtime / "access-token").write_text("app-key_+/\n")
+            url = write_computer_link(runtime)
+            parsed = urlsplit(url)
+            self.assertEqual(parsed.scheme, "http")
+            self.assertEqual(parsed.netloc, "127.0.0.1:8765")
+            self.assertEqual(parse_qs(parsed.fragment), {"key": ["app-key_+/"]})
+            self.assertEqual((runtime / "computer-url").read_text(), url)
+            self.assertEqual((runtime / "computer-url").stat().st_mode & 0o777, 0o600)
+
     def test_import_and_app_creation_do_not_write_runtime_files(self):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as directory:

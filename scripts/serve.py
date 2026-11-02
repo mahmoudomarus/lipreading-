@@ -13,6 +13,17 @@ from urllib.parse import urlencode
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def write_computer_link(runtime):
+    token = (runtime / "access-token").read_text().strip()
+    url = "http://127.0.0.1:8765/#" + urlencode({"key": token})
+    path = runtime / "computer-url"
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as handle:
+        handle.write(url)
+    os.chmod(path, 0o600)
+    return url
+
+
 def wait_for_server(server, *, attempts=60, opener=None, sleep=time.sleep):
     opener = opener or urllib.request.urlopen
     for _ in range(attempts):
@@ -76,6 +87,7 @@ def main():
         print(str(exc), file=sys.stderr)
         stop(exit_code=1)
 
+    print("\nOpen on this computer:\n" + write_computer_link(runtime) + "\n", flush=True)
     tunnel = subprocess.Popen(
         [
             "cloudflared",
