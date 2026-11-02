@@ -149,7 +149,8 @@
               <div class="mode-switch" role="group" aria-label="Caption mode">
                 <button id="live-mode" aria-pressed="true">
                   <span class="live-dot"></span>Live</button
-                ><button id="phrase-mode" aria-pressed="false">Phrase</button>
+                ><button id="phrase-mode" aria-pressed="false">Phrase</button
+                ><button id="commands-mode" aria-pressed="false">Commands</button>
               </div>
               <span class="mode-note" id="window-note">Drafts as you speak</span
               ><span class="fps-pill" id="fps">-- fps</span>
@@ -445,6 +446,19 @@
           <p>Video only. Audio is never requested.</p>
         </div>
         <span class="setting-value">Off</span>
+      </div>
+      <div class="accuracy-section" id="phrases-section">
+        <h3>Command phrases</h3>
+        <p>
+          In Commands mode, each reading snaps to the closest phrase below, or is held if none fits.
+          Short, clearly different phrases work best. One phrase per line.
+        </p>
+        <label for="phrases-text">Your phrases</label
+        ><textarea id="phrases-text" rows="8"></textarea>
+        <div class="phrases-actions">
+          <button id="phrases-save" type="button">Save phrases</button
+          ><span id="phrases-message" role="status"></span>
+        </div>
       </div>
       <div class="accuracy-section">
         <h3>Check your own accuracy</h3>

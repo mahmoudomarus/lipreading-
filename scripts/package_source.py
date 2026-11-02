@@ -32,6 +32,7 @@ FILES = [
     "server.py",
     "provider.py",
     "agent.py",
+    "commands.py",
     "speech.py",
     "phone-app/package.json",
     "phone-app/package-lock.json",

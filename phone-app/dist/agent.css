@@ -819,3 +819,20 @@ select:focus-visible {
     max-height: none;
   }
 }
+.phrases-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #9cbb8c;
+}
+.phrases-actions button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #c7f2b2;
+  color: #1d2b19;
+  font-size: 12px;
+  cursor: pointer;
+}

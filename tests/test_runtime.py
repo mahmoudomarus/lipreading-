@@ -130,6 +130,26 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         await self.session.finish_turn(1, 5)
         self.assertEqual(len(self.events), 1)
 
+    async def test_command_mode_snaps_to_a_saved_phrase_or_holds(self):
+        self.runtime.agent_store.save_phrases(["Set a timer for five minutes", "Show my notes"])
+        self.session.commands = True
+        self.session.phrases = await self.session.load_phrases()
+        self.session.utterances.add(
+            1,
+            1,
+            {"text": "SAID A TIMER FOR FIVE MINUTES", "auto_send": False, "review_reason": "x"},
+        )
+        await self.session.finish_turn(1, 4)
+        self.assertEqual(self.events[0]["text"], "Set a timer for five minutes")
+        self.assertEqual(self.events[0]["heard"], "SAID A TIMER FOR FIVE MINUTES")
+        self.assertTrue(self.events[0]["auto_send"])
+        self.session.utterances.add(
+            2, 1, {"text": "THE SUNRISE WOULD BE TOO SOON", "auto_send": True}
+        )
+        await self.session.finish_turn(2, 8)
+        self.assertFalse(self.events[1]["auto_send"])
+        self.assertIn("did not match", self.events[1]["review_reason"])
+
     async def test_newer_turn_does_not_drop_a_finished_reading(self):
         self.session.active_turn = 2
         self.session.utterances.add(1, 1, {"text": "hello there", "auto_send": True})

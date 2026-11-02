@@ -10,6 +10,7 @@ from collections import deque
 
 from fastapi import WebSocketDisconnect
 
+import commands
 from config import (
     DRAFT_CONTEXT_SECONDS,
     MAX_DECODE_SECONDS,
@@ -42,6 +43,8 @@ class StreamSession:
             await self.loop.run_in_executor(self.runtime.mouth_executor, self.mouth.reset)
         self.session_id = secrets.token_urlsafe(12)
         self.conversation = self.hello.get("conversation") is True
+        self.commands = self.hello.get("commands") is True
+        self.phrases = await self.load_phrases() if self.commands else []
         self.mode = self.hello.get("mode", "live")
         self.mode = self.mode if self.mode in {"live", "phrase"} else "live"
         self.buffer = StreamBuffer()
@@ -86,13 +89,20 @@ class StreamSession:
         except Exception:
             log.debug("Framing feedback failed", exc_info=True)
 
+    async def load_phrases(self):
+        store = self.runtime.agent_store
+        return await store.async_db(store.phrases)
+
     async def finish_turn(self, turn_id, endpoint):
         turn = self.utterances.turns.get(turn_id)
         if turn and turn["sent"]:
             return
         result = self.utterances.finish(turn_id, endpoint)
         if result:
-            if result["auto_send"]:
+            if self.commands:
+                # A closed phrase list replaces free-form guards: snap to a phrase or hold.
+                result = commands.apply(result, self.phrases)
+            elif result["auto_send"]:
                 result.update(self.guard.assess(result, endpoint))
             if len(result["text"]) > 1200:
                 result.update(
@@ -408,6 +418,9 @@ class StreamSession:
                         await self.send({"type": "pong"})
                     elif control.get("type") == "conversation":
                         self.conversation = control.get("enabled") is True
+                    elif control.get("type") == "commands":
+                        self.commands = control.get("enabled") is True
+                        self.phrases = await self.load_phrases() if self.commands else []
                     elif control.get("type") in {"commit", "finish"}:
                         if self.visual and (not self.active_turn):
                             self.active_turn += 1

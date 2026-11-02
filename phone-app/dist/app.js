@@ -192,11 +192,18 @@ function chooseMode(next) {
   mode = next;
   $('live-mode').setAttribute('aria-pressed', String(mode === 'live'));
   $('phrase-mode').setAttribute('aria-pressed', String(mode === 'phrase'));
-  $('window-note').textContent = mode === 'live' ? 'Pause for a reply' : 'One phrase · up to 8s';
+  $('commands-mode').setAttribute('aria-pressed', String(mode === 'commands'));
+  $('window-note').textContent =
+    mode === 'live'
+      ? 'Pause for a reply'
+      : mode === 'commands'
+        ? 'Say one of your phrases'
+        : 'One phrase · up to 8s';
   $('commit').hidden = mode === 'phrase';
 }
 $('live-mode').onclick = () => chooseMode('live');
 $('phrase-mode').onclick = () => chooseMode('phrase');
+$('commands-mode').onclick = () => chooseMode('commands');
 
 async function openCamera() {
   if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia)
@@ -275,7 +282,9 @@ async function startCapture() {
         socket.send(
           JSON.stringify({
             token: connection.key,
-            mode,
+            // Commands mode is live capture whose finished turns snap to saved phrases.
+            mode: mode === 'commands' ? 'live' : mode,
+            commands: mode === 'commands',
             conversation: $('agent-live-toggle').checked,
           }),
         );
@@ -335,13 +344,13 @@ async function startCapture() {
     media.getVideoTracks()[0].onended = () => stopCapture();
     $('start').disabled = false;
     $('start').classList.add('running');
-    $('start-label').textContent = mode === 'live' ? 'Stop reading' : 'Finish phrase';
+    $('start-label').textContent = mode === 'phrase' ? 'Finish phrase' : 'Stop reading';
     $('capture-state').replaceChildren(
       document.createElement('span'),
       document.createTextNode('LIVE CAMERA'),
     );
     $('capture-state').classList.add('active');
-    $('live-mode').disabled = $('phrase-mode').disabled = true;
+    $('live-mode').disabled = $('phrase-mode').disabled = $('commands-mode').disabled = true;
     $('commit').disabled = false;
     $('flip').disabled = false;
     cameraHint('Checking your framing…');
@@ -588,13 +597,24 @@ function renderCaptions() {
     meta.className = 'entry-meta';
     const tag = document.createElement('span');
     tag.className = 'refined';
-    tag.textContent = entry.auto_send === false ? 'Unclear · not sent' : 'Refined phrase';
+    tag.textContent =
+      entry.auto_send === false
+        ? 'Unclear · not sent'
+        : entry.heard
+          ? 'Matched your phrase'
+          : 'Refined phrase';
     const time = document.createElement('time');
     time.textContent = entry.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     meta.append(tag, time);
     const text = document.createElement('p');
     text.textContent = displayText(entry.assist?.text || entry.text);
     article.append(meta, text);
+    if (entry.heard) {
+      const source = document.createElement('div');
+      source.className = 'entry-source';
+      source.textContent = 'Read as “' + displayText(entry.heard) + '”';
+      article.append(source);
+    }
     if (entry.assist) {
       tag.textContent = 'Model-selected reading';
       const source = document.createElement('div');
@@ -712,7 +732,7 @@ function cleanup() {
   $('start').disabled = false;
   $('flip').disabled = false;
   $('commit').disabled = true;
-  $('live-mode').disabled = $('phrase-mode').disabled = false;
+  $('live-mode').disabled = $('phrase-mode').disabled = $('commands-mode').disabled = false;
   $('draft-card').hidden = true;
   $('transcript-empty').hidden = entries.length > 0;
 }
@@ -765,7 +785,31 @@ $('details-toggle').onclick = () => {
 };
 function openSettings() {
   $('settings-dialog').showModal();
+  loadPhrases();
 }
+async function loadPhrases() {
+  try {
+    const response = await requestAPI('/api/phrases', { method: 'GET' });
+    $('phrases-text').value = (await response.json()).phrases.join('\n');
+    $('phrases-message').textContent = '';
+  } catch (error) {
+    $('phrases-message').textContent = error.message;
+  }
+}
+$('phrases-save').onclick = async () => {
+  try {
+    const phrases = $('phrases-text').value.split('\n');
+    const response = await requestAPI('/api/phrases', { body: { phrases } });
+    const saved = (await response.json()).phrases;
+    $('phrases-text').value = saved.join('\n');
+    $('phrases-message').textContent = saved.length + ' phrases saved.';
+    // A running Commands session reloads the list without restarting the camera.
+    if (mode === 'commands' && socket?.readyState === WebSocket.OPEN)
+      socket.send(JSON.stringify({ type: 'commands', enabled: true }));
+  } catch (error) {
+    $('phrases-message').textContent = error.message;
+  }
+};
 $('settings-button').onclick = openSettings;
 $('pairing-provider').onclick = () => {
   openSettings();

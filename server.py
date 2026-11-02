@@ -215,6 +215,27 @@ async def agent_submit(request: Request):
         raise HTTPException(400, str(exc)) from None
 
 
+@router.get("/api/phrases")
+async def phrases_get(request: Request):
+    runtime = request.app.state.runtime
+    authorize_request(request)
+    return {"phrases": await runtime.agent_store.async_db(runtime.agent_store.phrases)}
+
+
+@router.post("/api/phrases")
+async def phrases_save(request: Request):
+    runtime = request.app.state.runtime
+    authorize_request(request)
+    body = await small_json(request, 9000)
+    try:
+        saved = await runtime.agent_store.async_db(
+            runtime.agent_store.save_phrases, body.get("phrases")
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+    return {"phrases": saved}
+
+
 @router.post("/api/agent/cancel-all")
 async def cancel_all_agents(request: Request):
     runtime = request.app.state.runtime

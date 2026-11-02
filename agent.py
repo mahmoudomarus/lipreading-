@@ -16,6 +16,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+from commands import DEFAULT_PHRASES, clean_phrases
 from config import agent_concurrency
 from provider import ProviderError
 from recognition_guard import review_reason
@@ -156,7 +157,8 @@ class AgentStore:
         with self.db() as db:
             db.executescript("""CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, input TEXT NOT NULL, source TEXT NOT NULL, state TEXT NOT NULL, created REAL NOT NULL, updated REAL NOT NULL, plan TEXT, result TEXT, error TEXT);
             CREATE TABLE IF NOT EXISTS notes(id TEXT PRIMARY KEY,text TEXT NOT NULL,created REAL NOT NULL);
-            CREATE TABLE IF NOT EXISTS timers(id TEXT PRIMARY KEY,label TEXT NOT NULL,due REAL NOT NULL,created REAL NOT NULL);""")
+            CREATE TABLE IF NOT EXISTS timers(id TEXT PRIMARY KEY,label TEXT NOT NULL,due REAL NOT NULL,created REAL NOT NULL);
+            CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);""")
             # Databases created before alternative readings were stored gain the column here.
             columns = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
             if "alternatives" not in columns:
@@ -180,6 +182,20 @@ class AgentStore:
                 "UPDATE jobs SET state='failed',error='Service restarted during the model request. Review and retry.',updated=? WHERE state IN ('thinking','researching')",
                 (time.time(),),
             )
+
+    def phrases(self):
+        with self.db() as db:
+            row = db.execute("SELECT value FROM settings WHERE key='phrases'").fetchone()
+        return json.loads(row["value"]) if row else list(DEFAULT_PHRASES)
+
+    def save_phrases(self, phrases):
+        phrases = clean_phrases(phrases)
+        with self.db() as db:
+            db.execute(
+                "INSERT INTO settings(key,value) VALUES('phrases',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (json.dumps(phrases),),
+            )
+        return phrases
 
     def submit(self, text, source, request_id, alternatives=None):
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 1200:
