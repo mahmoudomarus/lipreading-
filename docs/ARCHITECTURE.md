@@ -15,7 +15,7 @@
 | Structured text provider adapter | `provider.py` |
 | Durable jobs, validated tools and receipts | `agent.py` |
 | Cited report and public-link validation | `web_results.py` |
-| Optional speech and compatibility adapter | `openai_bridge.py` |
+| Optional speech and compatibility adapter | `speech.py` |
 | Recording conversion | `video_export.py` |
 | Buildless browser application | `phone-app/dist/` |
 
@@ -79,7 +79,6 @@ All API HTTP routes require the app bearer token. Camera authentication occurs i
 | `POST /api/agent/cancel-all` | Cancel all queued, running and review jobs |
 | `POST /api/export` | Bounded MP4 conversion |
 
-The `/api/openai/*` compatibility routes remain available; new integrations use the generic provider routes. The API has no stable external versioning promise. [Setup](SETUP.md) and [security](../SECURITY.md) describe deployment and data boundaries.
 
 ## Extend existing components
 

@@ -37,7 +37,7 @@ class TextProvider:
         self.transport = transport
         self.protocol = os.getenv("AGENT_PROTOCOL", "responses")
         self.base = endpoint(os.getenv("AGENT_BASE_URL", "https://api.openai.com/v1"))
-        self.model = os.getenv("AGENT_MODEL", os.getenv("OPENAI_TEXT_MODEL", "gpt-6.1-sol"))
+        self.model = os.getenv("AGENT_MODEL", "gpt-6.1-sol")
         legacy_key = (
             os.getenv("OPENAI_API_KEY", "") if self.base == "https://api.openai.com/v1" else ""
         )

@@ -51,6 +51,9 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
             async def send_json(inner, data):
                 self.events.append(data)
 
+            async def close(inner, **kwargs):
+                self.events.append({"type": "closed", **kwargs})
+
         self.session = StreamSession(self.runtime, Socket(), {})
         await self.session.prepare()
         self.runtime.worker.cancel()
@@ -108,3 +111,6 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(self.session.task)
         self.assertTrue(self.session.closing)
         self.session.schedule()
+        await self.session.failure_task
+        self.assertEqual([event["type"] for event in self.events], ["error", "closed"])
+        self.assertEqual(self.events[1]["code"], 1011)

@@ -4,6 +4,15 @@ from turn_taking import LipActivity, Utterances
 
 
 class TurnTests(unittest.TestCase):
+    def test_empty_middle_part_does_not_add_spaces_to_alternatives(self):
+        turns = Utterances()
+        turns.add(1, 1, {"text": "call"})
+        turns.add(1, 2, {"text": " "})
+        turns.add(1, 3, {"text": "maya", "alternatives": ["anna", "anna", "maya"]})
+        result = turns.finish(1, 4)
+        self.assertEqual(result["text"], "call maya")
+        self.assertEqual(result["alternatives"], ["call anna"])
+
     def test_single_part_preserves_distinct_alternatives_and_visual_draft(self):
         turns = Utterances()
         turns.add(

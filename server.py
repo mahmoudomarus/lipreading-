@@ -22,9 +22,9 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from config import DRAFT_CONTEXT_SECONDS, PROTOCOL_VERSION
-from openai_bridge import BridgeError, OpenAIBridge
 from provider import ProviderError
 from runtime import Runtime
+from speech import RealtimeSpeech, SpeechError
 from stream_session import StreamSession
 from video_export import ExportError, export_mp4
 
@@ -141,7 +141,6 @@ async def provider_connect(request: Request):
     body = await small_json(request, 2000)
     try:
         result = await runtime.provider.configure(body)
-        runtime.openai_bridge.key = runtime.provider.key if result["voice_available"] else ""
         return result
     except ProviderError as exc:
         raise HTTPException(400, str(exc)) from None
@@ -151,7 +150,6 @@ async def provider_connect(request: Request):
 async def provider_disconnect(request: Request):
     runtime = request.app.state.runtime
     authorize_request(request)
-    runtime.openai_bridge.disconnect()
     return runtime.provider.disconnect()
 
 
@@ -177,12 +175,12 @@ async def provider_voice(request: Request):
     body = await small_json(request, 1800)
     if runtime.voice_lock.locked():
         raise HTTPException(429, "A voice is already processing.")
-    bridge = OpenAIBridge(key=runtime.provider.key)
+    bridge = RealtimeSpeech(key=runtime.provider.key)
     try:
         async with runtime.voice_lock:
             audio = await bridge.voice(body.get("text"))
         return Response(audio, media_type="audio/wav")
-    except BridgeError:
+    except SpeechError:
         raise HTTPException(
             400, "Speech generation failed. Check speech model access and quota."
         ) from None
@@ -237,59 +235,6 @@ async def agent_operation(job_id: str, operation: str, request: Request):
             return await runtime.agent_store.async_db(runtime.agent_store.dismiss, job_id)
         raise ValueError("Unknown operation.")
     except ValueError as exc:
-        raise HTTPException(400, str(exc)) from None
-
-
-@router.get("/api/openai/config")
-async def openai_config(request: Request):
-    runtime = request.app.state.runtime
-    authorize_request(request)
-    return runtime.openai_bridge.config()
-
-
-@router.post("/api/openai/config")
-async def connect_openai(request: Request):
-    runtime = request.app.state.runtime
-    authorize_request(request)
-    body = await small_json(request, 1500)
-    try:
-        return await runtime.openai_bridge.connect_key(body.get("key"))
-    except BridgeError as exc:
-        raise HTTPException(400, str(exc)) from None
-
-
-@router.delete("/api/openai/config")
-async def forget_openai(request: Request):
-    runtime = request.app.state.runtime
-    authorize_request(request)
-    return runtime.openai_bridge.disconnect()
-
-
-@router.post("/api/openai/assist")
-async def assist_openai(request: Request):
-    runtime = request.app.state.runtime
-    authorize_request(request)
-    body = await small_json(request)
-    try:
-        return await runtime.openai_bridge.assist(body.get("candidates"), body.get("context", ""))
-    except BridgeError as exc:
-        raise HTTPException(400, str(exc)) from None
-
-
-@router.post("/api/openai/voice")
-async def voice_openai(request: Request):
-    runtime = request.app.state.runtime
-    authorize_request(request)
-    body = await small_json(request, 1800)
-    if runtime.voice_lock.locked():
-        raise HTTPException(429, "One voice is already being generated.")
-    try:
-        async with runtime.voice_lock:
-            audio = await runtime.openai_bridge.voice(body.get("text"))
-        return Response(
-            audio, media_type="audio/wav", headers={"X-Voice-Source": "openai-generated"}
-        )
-    except BridgeError as exc:
         raise HTTPException(400, str(exc)) from None
 
 

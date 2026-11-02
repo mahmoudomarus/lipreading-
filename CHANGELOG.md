@@ -2,11 +2,12 @@
 
 ## Unreleased
 
+Remove the unused provider-specific compatibility routes, retaining caption speech behind the generic provider route. Review holds are kept by default. Surface camera-session failures before closing and normalize combined alternatives.
+
 Run background jobs concurrently with a configurable default limit of three. Speech only stops caption audio; it no longer cancels jobs, pending confirmations or older finished turns. Add per-task cancellation, Cancel and edit, and Stop all. Keep terminal cancellation and request UUIDs authoritative, preserve pending confirmations beyond the history window, and offload async SQLite work from the event loop.
 
 Correct action previews and reject malformed camera control values. Preserve drafts, alternatives and review holds across visual turns. Extract startup-owned runtime resources and a testable camera session. Enforce lint in CI, retain failed plans, account for research in queue bounds and report launcher timeouts as failures. See `docs/BASELINE.md` for repeated timing measurements and `docs/RECORDING.md` for the first labeled evaluation protocol.
 
-Add evaluation of assembled turns, natural endpointing, paired regressions, split checks, critical-span proxies and isolated command-intent plans. Add a disabled-by-default hold-preservation experiment (`LIPREAD_PRESERVE_HOLDS=1`). See `docs/BASELINE.md` and `docs/EVALUATION.md`.
 
 Add local lip-shape turn detection, pause-based utterance assembly, interruption of in-flight requests, stale-turn rejection, cited web research, sandboxed page cards, and downloadable Markdown drafts. See `docs/TURN_TAKING.md` for implemented behavior and limits.
 

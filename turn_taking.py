@@ -99,7 +99,7 @@ class Utterances:
         reason = next((p.get("review_reason") for p in parts if p.get("auto_send") is False), None)
         if reason is None and any(p.get("auto_send") is False for p in parts):
             reason = "Part of this request needs correction."
-        prefix = " ".join(p["text"].strip() for p in parts[:-1])
+        prefix = " ".join(p["text"].strip() for p in parts[:-1] if p.get("text", "").strip())
         alternatives = []
         for candidate in parts[-1].get("alternatives", []):
             combined = " ".join(s for s in [prefix, candidate.strip()] if s)

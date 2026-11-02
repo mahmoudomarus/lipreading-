@@ -37,7 +37,7 @@ With the full installation and running service:
 .venv/bin/python scripts/benchmark.py path/to/consented-clip.mp4
 ```
 
-The HTTP harness script assumes it runs from the same checkout/data store as the service so it can remove its own test job. Use it on a development instance. `scripts/check_openai.py --voice` exercises the optional legacy adapter explicitly and may incur charges; it is not needed for other text endpoints. No integration script should print a key or private phone link except the dedicated link/launcher tools.
+The HTTP harness script assumes it runs from the same checkout/data store as the service so it can remove its own test job. Use it on a development instance. `scripts/check_speech.py` exercises the optional caption-speech adapter explicitly and may incur charges; it is not needed for other text endpoints. No integration script should print a key or private phone link except the dedicated link/launcher tools.
 
 ## Manual device checks
 

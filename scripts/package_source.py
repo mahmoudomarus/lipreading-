@@ -32,7 +32,7 @@ FILES = [
     "server.py",
     "provider.py",
     "agent.py",
-    "openai_bridge.py",
+    "speech.py",
     "video_export.py",
     "phone-app/package.json",
     "phone-app/package-lock.json",

@@ -11,7 +11,6 @@ from pathlib import Path
 from agent import AgentStore
 from config import agent_concurrency
 from engine import LipReader, QualityMonitor
-from openai_bridge import OpenAIBridge
 from provider import TextProvider
 from turn_taking import MouthMonitor
 
@@ -53,7 +52,6 @@ class Runtime:
         self.export_lock = asyncio.Lock()
         self.voice_lock = asyncio.Lock()
         self.provider = TextProvider()
-        self.openai_bridge = OpenAIBridge()
         self.agent_store = await asyncio.to_thread(AgentStore, self.directory / "agent.sqlite3")
         self.model_task = asyncio.create_task(self.load_model()) if self.load_models else None
         self.worker = asyncio.create_task(

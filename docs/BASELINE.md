@@ -35,6 +35,6 @@ The script records video SHA256, capture settings, status, each measured replay 
 
 Use the [recording protocol](RECORDING.md), [example manifest](examples/heldout.example.jsonl) and [evaluation guide](EVALUATION.md). Keep speaker, sentence and inference context separation explicit. A raw prediction is never a reference transcript.
 
-## Existing guard experiment
+## Default review holds
 
-`LIPREAD_PRESERVE_HOLDS` defaults to 0. With value 1 the guard preserves explicit incoming hold metadata in addition to its ordinary checks. Visual-turn assembly carries actual draft evidence and alternatives; final turn processing retains any part hold regardless of the experimental flag. The flag changes neither the recognizer nor its beam weights. Compare acceptance, clarification and critical errors on validation and held-out clips before changing defaults. Rollback is an unset flag or value 0 on service start.
+Native review holds remain blocking through turn assembly and final assessment. This preserves uncertain readings for explicit review and can increase clarification requests even for correctly recognized speech. There is no opt-in flag for retaining a hold. Measure acceptance and clarification on separate validation and held-out clips before changing the underlying thresholds.

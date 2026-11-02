@@ -20,8 +20,10 @@ async def main():
     parser.add_argument("--server", default="http://127.0.0.1:8765")
     parser.add_argument("--mode", choices=["phrase", "live"], default="phrase")
     parser.add_argument("--tail", type=float, default=0.0)
+    parser.add_argument("--token-file", type=Path, default=ROOT / ".runtime/access-token")
+    parser.add_argument("--report", type=Path)
     args = parser.parse_args()
-    token = (ROOT / ".runtime/access-token").read_text().strip()
+    token = args.token_file.read_text().strip()
     url = args.server.replace("https://", "wss://").replace("http://", "ws://") + "/api/stream"
     capture = cv2.VideoCapture(args.video)
     fps = capture.get(cv2.CAP_PROP_FPS) or 25
@@ -31,6 +33,7 @@ async def main():
         hello = json.loads(await ws.recv())
         print(hello, flush=True)
         assert hello["type"] == "connected", hello
+        assert hello["version"] == 4, hello
         start = time.monotonic()
 
         async def receive():
@@ -70,13 +73,21 @@ async def main():
     drafts = [e for e in events if e["type"] == "draft"]
     if not results:
         sys.exit("No refined result produced.")
+    utterances = [e for e in events if e["type"] == "utterance"]
+    if hello.get("visual_turns") and not utterances:
+        sys.exit("Visual endpointing produced no final utterance.")
     report = {
         "mode": args.mode,
+        "protocol_version": hello["version"],
+        "visual_turns": hello["visual_turns"],
+        "final_text": " ".join(e["text"] for e in (utterances or results)),
         "first_draft_seconds": drafts[0]["received_seconds"] if drafts else None,
         "first_refined_seconds": results[0]["received_seconds"],
         "events": events,
     }
-    (ROOT / f".runtime/smoke-{args.mode}-v2.json").write_text(json.dumps(report, indent=2))
+    target = args.report or ROOT / f".runtime/smoke-{args.mode}-v4.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(report, indent=2) + "\n")
     print("TIMING", json.dumps({k: v for k, v in report.items() if k != "events"}), flush=True)
 
 

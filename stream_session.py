@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import json
 import logging
-import os
 import secrets
 import time
 from collections import deque
@@ -46,14 +45,13 @@ class StreamSession:
         self.mode = self.hello.get("mode", "live")
         self.mode = self.mode if self.mode in {"live", "phrase"} else "live"
         self.buffer = StreamBuffer()
-        self.guard = RecognitionGuard(
-            preserve_holds=os.getenv("LIPREAD_PRESERVE_HOLDS", "0") == "1"
-        )
+        self.guard = RecognitionGuard()
         self.utterances = Utterances()
         self.closing = False
         self.draining = False
         self.cuts = deque()
         self.task = self.quality_task = self.mouth_task = None
+        self.failure_task = None
         self.last_timestamp = self.last_quality = self.last_mouth = -1.0
         self.last_analysis = None
         self.active_turn = 0
@@ -267,6 +265,7 @@ class StreamSession:
             if not completed.cancelled() and (error := completed.exception()) is not None:
                 log.error("Camera task failed", exc_info=(type(error), error, error.__traceback__))
                 self.closing = True
+                self.failure_task = asyncio.create_task(self.close_failed_session())
                 return
         while self.cuts and self.cuts[0][0] <= self.buffer.consumed:
             endpoint, tid = self.cuts.popleft()
@@ -294,6 +293,17 @@ class StreamSession:
             return
         self.buffer.last_draft = samples[-1][0]
         self.task = self.launch(self.recognize(samples, self.buffer.segment, final, tid, ending))
+
+    async def close_failed_session(self):
+        with contextlib.suppress(Exception):
+            await self.send(
+                {
+                    "type": "error",
+                    "message": "Recognition stopped unexpectedly. Restart the camera.",
+                }
+            )
+        with contextlib.suppress(Exception):
+            await self.ws.close(code=1011)
 
     async def run(self):
         await self.prepare()
@@ -402,6 +412,8 @@ class StreamSession:
                 )
         finally:
             self.closing = True
+            if self.failure_task:
+                await self.failure_task
             for job in (self.task, self.quality_task, self.mouth_task):
                 if job and (not job.done()):
                     job.cancel()
