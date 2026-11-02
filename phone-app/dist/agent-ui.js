@@ -7,6 +7,7 @@ import {
   jobCanCancel,
   backgroundStatus,
   newlyCompleted,
+  understanding,
 } from './agent-core.js';
 
 export function createAgentUI({
@@ -16,6 +17,7 @@ export function createAgentUI({
   onSettings,
   onStopAudio = () => {},
   onReply = () => {},
+  onSay = () => {},
   onLiveMode = () => {},
   onPhase = () => {},
 }) {
@@ -72,7 +74,9 @@ export function createAgentUI({
     async send(body) {
       $('agent-held').hidden = true;
       message('Sending your phrase…');
-      const response = await requestAPI('/api/agent/jobs', { body });
+      // With Speak for me on, a lip turn is understood and said aloud instead of answered.
+      const purpose = $('agent-speak-toggle').checked ? 'speak' : 'assist';
+      const response = await requestAPI('/api/agent/jobs', { body: { ...body, purpose } });
       const job = await response.json();
       acceptJob(job);
       message('Working in the background. You can keep talking.');
@@ -283,19 +287,30 @@ export function createAgentUI({
     for (const el of feed.querySelectorAll('.agent-turn')) el.remove();
     for (const job of jobs) {
       const turn = node('article', 'agent-turn'),
-        user = node('div', 'agent-user');
+        user = node('div', 'agent-user'),
+        understood = understanding(job);
       user.append(
         node(
           'span',
           'turn-label',
-          job.source === 'lip_prediction'
-            ? 'LIP PREDICTION · AUTO-SENT'
-            : job.source === 'reviewed_lips'
-              ? 'REVIEWED CAPTION'
-              : 'TYPED REQUEST',
+          understood
+            ? 'LIPS READ'
+            : job.source === 'lip_prediction'
+              ? 'LIP PREDICTION · AUTO-SENT'
+              : job.source === 'reviewed_lips'
+                ? 'REVIEWED CAPTION'
+                : 'TYPED REQUEST',
         ),
-        node('p', '', job.input),
+        node('p', understood ? 'raw-reading' : '', job.input),
       );
+      // The understanding step: what the assistant worked out before answering.
+      if (understood)
+        user.append(
+          node('span', 'turn-label understood-label', 'UNDERSTOOD · ' + understood.label),
+          node('p', 'understood-text', understood.text),
+        );
+      else if (job.source !== 'typed' && ['queued', 'thinking'].includes(job.state))
+        user.append(node('span', 'turn-label understood-label', 'UNDERSTANDING WHAT YOU SAID…'));
       if (job.source === 'lip_prediction' && job.state !== 'dismissed' && !jobCanCancel(job)) {
         const misread = node('button', 'misread-button', 'Misread · ignore');
         misread.onclick = () => operate(job, 'dismiss', misread);
@@ -310,9 +325,13 @@ export function createAgentUI({
           'turn-label',
           job.state === 'review'
             ? 'ACTION PREVIEW'
-            : job.state === 'completed'
-              ? 'ASSISTANT'
-              : 'AGENT · ' + job.state.toUpperCase(),
+            : job.purpose === 'speak' && job.state === 'completed'
+              ? job.plan?.certainty === 'unsure'
+                ? 'NOT SAID · CHECK THIS GUESS'
+                : 'SAID FOR YOU'
+              : job.state === 'completed'
+                ? 'ASSISTANT'
+                : 'AGENT · ' + job.state.toUpperCase(),
         ),
       );
       if (job.state === 'dismissed') {
@@ -323,6 +342,15 @@ export function createAgentUI({
           answer.append(node('p', 'dismissed-note', 'Any tools already executed are not undone.'));
       } else if (job.state === 'cancelled') {
         answer.append(node('p', 'dismissed-note', 'Cancelled. Completed actions are not undone.'));
+      } else if (job.plan && job.purpose === 'speak') {
+        answer.append(node('p', 'spoken-for-you', job.plan.understood || job.input));
+        const say = node(
+          'button',
+          'misread-button',
+          job.plan.certainty === 'unsure' ? 'Say it ↗' : 'Say again ↗',
+        );
+        say.onclick = () => onSay(job);
+        answer.append(say);
       } else if (job.plan) {
         if (job.plan.answer) answer.append(node('p', '', job.plan.answer));
         if (job.state === 'review') {

@@ -38,3 +38,20 @@ test('spoken replies keep whole sentences within the voice limit', () => {
   };
   assert.equal(spokenText(receipt), '2+2 = 4');
 });
+
+test('the understanding step is shown only when it changes a lip reading', async () => {
+  const { understanding } = await import('../dist/agent-core.js');
+  const lip = (understood, certainty = 'likely') => ({
+    source: 'lip_prediction',
+    input: 'TRAITOR JONES',
+    plan: { understood, certainty },
+  });
+  assert.deepEqual(understanding(lip("Trader Joe's")), { text: "Trader Joe's", label: 'probably' });
+  assert.equal(understanding(lip('Traitor Jones.')), null);
+  assert.equal(understanding({ ...lip("Trader Joe's"), source: 'typed' }), null);
+  assert.equal(
+    understanding({ source: 'lip_prediction', input: 'X', plan: { answer: 'old' } }),
+    null,
+  );
+  assert.equal(understanding(lip('Maybe this', 'unsure')).label, 'guessing');
+});

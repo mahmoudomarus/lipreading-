@@ -182,7 +182,7 @@ The included research adapter requires the supported hosted Responses endpoint. 
 
 With **Live replies** enabled, eligible finalized turns are submitted automatically. Drafts never submit. Switch it off to review, edit and send manually. An inherited chunk hold stays blocking through final turn assembly; it can hold a correct reading too. Correct the text or repeat the phrase, then explicitly review/send it.
 
-Automatically sent lip readings carry up to two alternative readings of the same lip movements. The assistant uses them, with the conversation, to work out what you most likely meant and says when it is guessing ("Sounds like you want..."). Notes and timers proposed from a guess still wait for your confirmation.
+Every request goes through an understanding step before it is answered. Automatically sent lip readings carry up to two alternative readings of the same lip movements; the assistant combines them with your saved names and the conversation to work out the sentence you most likely said, rates it clear, probably or guessing, and answers that sentence rather than the raw reading. The conversation shows both (**Lips read** and **Understood**), and later turns remember the understood version. When it is only guessing, it asks instead of acting. Notes and timers still wait for your confirmation.
 
 **Compare readings** chooses among existing candidates when at least two supported alternatives exist. Selection changes the caption display only; explicitly review/send that selection to create a request with those exact words. It does not revise an existing task. **Cancel and edit** cancels a selected active task, opens its text for editing, and sends the replacement under a new UUID. Old confirmations cannot execute cancelled details. **Misread · ignore** excludes a finished mistaken request from future context; cancel active work first. Completed receipts remain truthful. Typed requests use the same planner and tools and help separate tool problems from recognition errors.
 
@@ -207,7 +207,9 @@ Speaking never cancels tasks or pending confirmations. It stops generated audio 
 
 Tasks survive closing the browser while the computer service remains running. On service restart, queued tasks resume, pending confirmations remain, and in-flight calls become failed for explicit retry. Each task sees up to four completed earlier tasks as context without waiting for siblings still running. Concurrency means jobs within one server, not multiple server workers.
 
-## 9. Spoken replies
+## 9. Spoken replies and Speak for me
+
+**Speak for me** turns the app into a voice for someone who cannot use theirs: each sentence you mouth goes through the same understanding step and is then said aloud in a generated voice, instead of being answered. The conversation shows it as **Said for you**, with **Say again**. A sentence the assistant is only guessing at is not spoken automatically; check it and press **Say it**.
 
 **Speak replies** (on by default when the model connection supports speech) reads each new assistant reply aloud with generated speech, up to the first 360 characters in whole sentences. Replies loaded from history when the page opens are not spoken. Moving your lips stops playback; it never cancels tasks. Switch it off in the conversation panel to read replies only. **Play latest caption with AI voice** in Settings reads your own predicted caption aloud instead, for speaking to someone nearby.
 

@@ -97,3 +97,18 @@ export function spokenText(job, limit = 360) {
   }
   return spoken.trim() || text.slice(0, limit - 1).replace(/\s+\S*$/, '') + '…';
 }
+
+const CERTAINTY_LABEL = { clear: 'clear', likely: 'probably', unsure: 'guessing' };
+
+// What the assistant worked out from a noisy lip reading, when it differs from the reading.
+export function understanding(job) {
+  const text = job.plan?.understood?.trim();
+  if (!text || job.source === 'typed') return null;
+  const plain = (value) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  if (plain(text) === plain(job.input || '')) return null;
+  return { text, label: CERTAINTY_LABEL[job.plan.certainty] || 'probably' };
+}

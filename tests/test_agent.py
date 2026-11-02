@@ -9,7 +9,7 @@ from unittest.mock import patch
 import httpx
 from support import RuntimeTestCase
 
-from agent import AgentStore, calculate
+from agent import AgentStore, calculate, validate_plan
 from provider import ProviderError, TextProvider, endpoint
 
 
@@ -297,6 +297,77 @@ class AgentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["user_vocabulary"], [])
         self.assertIn("user_vocabulary", instructions)
         self.assertIn("other_readings", instructions)
+
+    def test_plans_carry_an_understanding_step_and_old_plans_still_load(self):
+        plan = {
+            "understood": "I'm going to Trader Joe's.",
+            "certainty": "likely",
+            "answer": "Enjoy!",
+            "actions": [],
+        }
+        self.assertEqual(
+            validate_plan(json.dumps(plan))["understood"], "I'm going to Trader Joe's."
+        )
+        self.assertEqual(validate_plan(json.dumps({"answer": "Hi", "actions": []}))["answer"], "Hi")
+        for bad in ({**plan, "certainty": "very"}, {**plan, "understood": 3}, {**plan, "extra": 1}):
+            with self.assertRaises(ProviderError):
+                validate_plan(json.dumps(bad))
+
+    async def test_later_turns_see_earlier_turns_as_understood(self):
+        self.store.submit("TRAITOR JONES", "lip_prediction", str(uuid.uuid4()))
+        understood = {
+            "understood": "Trader Joe's",
+            "certainty": "likely",
+            "answer": "Shopping?",
+            "actions": [],
+        }
+        await self.store.run_once(self.fake(understood))
+        self.submit("What should I buy?")
+        captured = []
+
+        class Provider:
+            def snapshot(self):
+                return self
+
+            async def complete(self, instructions, text, **kwargs):
+                captured.append(json.loads(text))
+                return json.dumps({"answer": "Eggs", "actions": []})
+
+        await self.store.run_once(Provider())
+        self.assertEqual(captured[0]["conversation"][0]["request"], "Trader Joe's")
+
+    async def test_speak_for_me_only_reconstructs_the_sentence_and_never_acts(self):
+        job = self.store.submit(
+            "I NEED SOME WALTER", "lip_prediction", str(uuid.uuid4()), [], "speak"
+        )
+        self.assertEqual(job["purpose"], "speak")
+        seen = []
+
+        class Provider:
+            def snapshot(self):
+                return self
+
+            async def complete(self, instructions, text, **kwargs):
+                seen.append(instructions)
+                return json.dumps(
+                    {
+                        "understood": "I need some water.",
+                        "certainty": "likely",
+                        "answer": "Here you go",
+                        "actions": [
+                            {"name": "save_note", "text": "water", "seconds": 0, "expression": ""}
+                        ],
+                    }
+                )
+
+        await self.store.run_once(Provider())
+        done = self.store.get(job["id"])
+        self.assertEqual(done["state"], "completed")
+        self.assertEqual(done["plan"]["understood"], "I need some water.")
+        self.assertEqual((done["plan"]["answer"], done["plan"]["actions"]), ("", []))
+        self.assertIn("say it aloud", seen[0])
+        with self.assertRaises(ValueError):
+            self.store.submit("Hello", "lip_prediction", str(uuid.uuid4()), [], "shout")
 
     def test_alternatives_are_validated_and_ignored_for_typed_requests(self):
         typed = self.store.submit("Hello", "typed", str(uuid.uuid4()), ["Yellow"])

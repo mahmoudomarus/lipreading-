@@ -72,6 +72,7 @@ const agentUI = createAgentUI({
       socket.send(JSON.stringify({ type: 'conversation', enabled }));
   },
   onReply: (job) => speakReply(job),
+  onSay: (job) => speakReply(job, { force: true }),
 });
 const visibilityResume = createVisibilityResume({
   hidden: () => document.hidden,
@@ -894,7 +895,7 @@ function refreshModelControls() {
   $('provider-state').textContent = providerReady ? 'Model connected' : 'Not connected';
   $('assist-toggle').disabled = !providerReady;
   $('auto-voice').disabled = !providerVoice;
-  $('agent-voice-toggle').disabled = !providerVoice;
+  $('agent-voice-toggle').disabled = $('agent-speak-toggle').disabled = !providerVoice;
   $('provider-forget').hidden = !providerReady;
   $('voice-latest').disabled = !providerVoice || !entries.length || voiceBusy;
   $('provider-connect').disabled = !connection?.key;
@@ -1051,9 +1052,13 @@ async function playEntry(entry) {
 for (const type of ['pointerdown', 'keydown'])
   document.addEventListener(type, () => audio.unlock().catch(() => {}), { once: true });
 // Assistant replies are spoken; lip movement stops playback through onStopAudio.
-async function speakReply(job) {
-  const text = spokenText(job);
-  if (!text || !providerVoice || !$('agent-voice-toggle').checked) return;
+async function speakReply(job, { force = false } = {}) {
+  // Speak for me says the user's own understood sentence; guesses wait for a tap.
+  const forUser = job.purpose === 'speak';
+  const text = forUser ? job.plan?.understood || job.input : spokenText(job);
+  if (!text || !providerVoice) return;
+  if (forUser ? job.plan?.certainty === 'unsure' && !force : !$('agent-voice-toggle').checked)
+    return;
   const epoch = ++voiceEpoch;
   voiceBusy = true;
   refreshModelControls();

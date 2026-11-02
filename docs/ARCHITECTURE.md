@@ -79,6 +79,7 @@ All API HTTP routes require the app bearer token. Camera authentication occurs i
 | `POST /api/agent/jobs/{id}/{confirm,cancel,dismiss}` | Existing review and correction operations |
 | `POST /api/agent/cancel-all` | Cancel all queued, running and review jobs |
 | `GET /api/phrases`, `POST /api/phrases` | Read or replace the Commands mode phrase list (up to 60 phrases) |
+| `POST /api/agent/jobs` `purpose` | `assist` (default) answers the request; `speak` only reconstructs the user's sentence (`understood`, `certainty`) for the client to say aloud, and never proposes actions |
 | `GET /api/vocabulary`, `POST /api/vocabulary` | Read or replace saved names and places used to correct readings and given to the planner |
 
 
