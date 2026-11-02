@@ -183,6 +183,8 @@ The included research adapter requires the supported hosted Responses endpoint. 
 
 With **Live replies** enabled, eligible finalized turns are submitted automatically. Drafts never submit. Switch it off to review, edit and send manually. An inherited chunk hold stays blocking through final turn assembly; it can hold a correct reading too. Correct the text or repeat the phrase, then explicitly review/send it.
 
+**Speak replies** (on by default when the model connection supports speech) reads each new assistant reply aloud with generated speech, up to the first 360 characters in whole sentences. Replies loaded from history when the page opens are not spoken. Moving your lips stops playback; it never cancels tasks.
+
 **Compare readings** chooses among existing candidates when at least two supported alternatives exist. Selection changes the caption display only; explicitly review/send that selection to create a request with those exact words. It does not revise an existing task. **Cancel and edit** cancels a selected active task, opens its text for editing, and sends the replacement under a new UUID. Old confirmations cannot execute cancelled details. **Misread · ignore** excludes a finished mistaken request from future context; cancel active work first. Completed receipts remain truthful. Typed requests use the same planner and tools and help separate tool problems from recognition errors.
 
 | Tool | Behavior |
@@ -208,7 +210,7 @@ Tasks survive closing the browser while the computer service remains running. On
 
 ## 9. Studio
 
-Open Studio, choose 9:16 or 16:9, then **Record clip**. Recording captures up to 45 seconds of the real camera canvas with labeled predictions and agent state/results. You can review requests while recording. Optional generated voice is mixed in only when played; microphone audio is never added.
+Studio is not linked from the main page. Open it by adding `?studio` to the app address, choose 9:16 or 16:9, then **Record clip**. Recording captures up to 45 seconds of the real camera canvas with labeled predictions and agent state/results. You can review requests while recording. Optional generated voice is mixed in only when played; microphone audio is never added.
 
 Stop recording and download the MP4. Server conversion uses FFmpeg; if conversion fails, the original supported browser format remains downloadable, often WebM. Browser recorder support varies. Play back the file before sharing. Settings dialogs, keys and connection URLs are outside the recorded canvas; visible captions and task details are personal data.
 

@@ -74,7 +74,7 @@ All API HTTP routes require the app bearer token. Camera authentication occurs i
 | `WS /api/stream` | Camera packets, caption/activity events and controls |
 | `GET/POST/DELETE /api/provider/config` | Provider connection without returning its key |
 | `POST /api/provider/assist` | Select an existing candidate |
-| `POST /api/provider/voice` | Optional generated caption speech |
+| `POST /api/provider/voice` | Optional generated speech for assistant replies and captions |
 | `GET/POST /api/agent/jobs` | Read or submit jobs |
 | `POST /api/agent/jobs/{id}/{confirm,cancel,dismiss}` | Existing review and correction operations |
 | `POST /api/agent/cancel-all` | Cancel all queued, running and review jobs |

@@ -645,6 +645,10 @@ select:focus-visible {
   white-space: nowrap;
   cursor: pointer;
 }
+.live-switches {
+  display: flex;
+  gap: 14px;
+}
 .live-conversation input {
   accent-color: #c7f2b2;
 }

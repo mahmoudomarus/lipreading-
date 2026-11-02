@@ -76,3 +76,24 @@ export function backgroundStatus(jobs) {
     text: parts.join(' · ') || 'Your turn',
   };
 }
+
+// Only a job this page saw unfinished counts as a new reply; reloaded history stays quiet.
+export function newlyCompleted(before, after) {
+  const previous = new Map(before.map((job) => [job.id, job.state]));
+  return after.filter(
+    (job) =>
+      job.state === 'completed' && previous.has(job.id) && previous.get(job.id) !== 'completed',
+  );
+}
+
+// The voice endpoint accepts up to 360 characters, so speak whole leading sentences.
+export function spokenText(job, limit = 360) {
+  const text = agentSummary(job).replace(/\s+/g, ' ').trim();
+  if (text.length <= limit) return text;
+  let spoken = '';
+  for (const sentence of text.match(/[^.!?]+[.!?]+/g) || []) {
+    if ((spoken + sentence).trim().length > limit) break;
+    spoken += sentence;
+  }
+  return spoken.trim() || text.slice(0, limit - 1).replace(/\s+\S*$/, '') + '…';
+}

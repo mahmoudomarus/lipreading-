@@ -1,5 +1,6 @@
 import { createFramePacer, createFrameRateMeter } from './capture-pacer.js';
 import { createAgentUI } from './agent-ui.js';
+import { spokenText } from './agent-core.js';
 import {
   readConnection,
   framePacket,
@@ -81,6 +82,7 @@ const agentUI = createAgentUI({
   onPhase: (value, text) => {
     turnPhase = text;
   },
+  onReply: (job) => speakReply(job),
 });
 const studio = createStudio({
   video,
@@ -890,6 +892,7 @@ function refreshModelControls() {
   $('provider-state').textContent = providerReady ? 'Model connected' : 'Not connected';
   $('assist-toggle').disabled = !providerReady;
   $('auto-voice').disabled = !providerVoice;
+  $('agent-voice-toggle').disabled = !providerVoice;
   $('provider-forget').hidden = !providerReady;
   $('voice-latest').disabled = !providerVoice || !entries.length || voiceBusy;
   $('provider-connect').disabled = !connection?.key;
@@ -1040,6 +1043,29 @@ async function playEntry(entry) {
     if (epoch === voiceEpoch) voiceBusy = false;
     refreshModelControls();
     renderCaptions();
+  }
+}
+// Browsers allow audio only after a user gesture, and replies arrive later, so unlock early.
+for (const type of ['pointerdown', 'keydown'])
+  document.addEventListener(type, () => audio.unlock().catch(() => {}), { once: true });
+// Assistant replies are spoken; lip movement stops playback through onStopAudio.
+async function speakReply(job) {
+  const text = spokenText(job);
+  if (!text || !providerVoice || !$('agent-voice-toggle').checked) return;
+  const epoch = ++voiceEpoch;
+  voiceBusy = true;
+  refreshModelControls();
+  try {
+    await audio.unlock();
+    const response = await requestAPI('/api/provider/voice', { body: { text }, timeout: 40000 });
+    const bytes = await response.arrayBuffer();
+    if (epoch !== voiceEpoch) return;
+    await audio.play(bytes);
+  } catch (error) {
+    if (epoch === voiceEpoch) providerMessage(error.message, true);
+  } finally {
+    if (epoch === voiceEpoch) voiceBusy = false;
+    refreshModelControls();
   }
 }
 $('voice-latest').onclick = () => playEntry(entries.at(-1));

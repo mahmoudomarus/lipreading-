@@ -6,6 +6,7 @@ import {
   mergeJobs,
   jobCanCancel,
   backgroundStatus,
+  newlyCompleted,
 } from './agent-core.js';
 
 export function createAgentUI({
@@ -14,6 +15,7 @@ export function createAgentUI({
   onState,
   onSettings,
   onStopAudio = () => {},
+  onReply = () => {},
   onLiveMode = () => {},
   onPhase = () => {},
 }) {
@@ -37,8 +39,16 @@ export function createAgentUI({
   function message(text) {
     $('agent-message').textContent = text;
   }
+  // Every job update goes through here so a task finishing becomes one spoken reply.
+  function adopt(next) {
+    const finished = newlyCompleted(jobs, next);
+    jobs = next;
+    for (const job of finished) onReply(job);
+  }
   function acceptJob(job) {
-    jobs = mergeJobs(jobs, [job]);
+    const known = jobs.some((j) => j.id === job.id);
+    adopt(mergeJobs(jobs, [job]));
+    if (!known && job.state === 'completed') onReply(job);
     render();
     onState(job);
     connected = true;
@@ -111,7 +121,7 @@ export function createAgentUI({
     try {
       const response = await requestAPI('/api/agent/cancel-all');
       const result = await response.json();
-      jobs = mergeJobs(jobs, result.jobs);
+      adopt(mergeJobs(jobs, result.jobs));
       render();
       phase('ready', backgroundStatus(jobs).text);
       message('Pending tasks cancelled. Completed work is unchanged.');
@@ -247,7 +257,7 @@ export function createAgentUI({
     try {
       const r = await requestAPI('/api/agent/jobs/' + encodeURIComponent(job.id) + '/' + operation);
       const next = await r.json();
-      jobs = jobs.map((j) => (j.id === next.id ? next : j));
+      adopt(jobs.map((j) => (j.id === next.id ? next : j)));
       render();
       onState(next);
       schedule(100);
@@ -414,7 +424,7 @@ export function createAgentUI({
     try {
       const r = await requestAPI('/api/agent/jobs', { method: 'GET' });
       const data = await r.json();
-      jobs = mergeJobs(jobs, data.jobs);
+      adopt(mergeJobs(jobs, data.jobs));
       timers = data.timers;
       serverOffset = data.server_time - Date.now() / 1000;
       render();
