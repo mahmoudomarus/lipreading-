@@ -1,0 +1,616 @@
+{
+  "created_utc": "2026-11-02T01:59:53.504103+00:00",
+  "finished_utc": "2026-11-02T02:07:06.775926+00:00",
+  "source": {
+    "old": {
+      "revision": "7512390a0a9483ff612b9d7718c93d1211897c7b",
+      "archive_sha256": "432ffbeff8f8e1842377406d6c03444079a54694452ce70b55a5c26cdd753d07"
+    },
+    "new": {
+      "revision": "70e01e3b822bfaa7e69c7c88b9089ca41321e102",
+      "archive_sha256": "3bb2c56eb19b9eec78a3d29dc27a860bb9a05069ce8d8bbff42c8331700721a7"
+    }
+  },
+  "environment": {
+    "machine": {
+      "system": "macOS-27.0.1-arm64-arm-64bit",
+      "architecture": "arm64",
+      "cpu": "Apple M1",
+      "memory_bytes": 8589934592
+    },
+    "python": "3.11.11 (main, Jan 17 2025, 17:22:13) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "packages": {
+      "torch": "2.11.0",
+      "torchvision": "0.26.0",
+      "torchaudio": "2.11.0",
+      "mediapipe": "1.2.0",
+      "numpy": "2.4.4",
+      "opencv-python-headless": "4.13.0.92",
+      "fastapi": "0.115.0",
+      "starlette": "0.38.6",
+      "uvicorn": "0.30.6",
+      "httpx": "0.28.1",
+      "websockets": "15.0.1",
+      "scikit-image": "0.26.0",
+      "sentencepiece": "0.2.2",
+      "av": "17.0.0",
+      "Pillow": "11.1.0"
+    },
+    "assets": {
+      "vendor": {
+        "url": "https://github.com/amanvirparhar/chaplin.git",
+        "revision": "7aee1f8fca776ce4f63690063310b53573b7d804"
+      },
+      "models": [
+        {
+          "name": "vsr.pth",
+          "url": "https://huggingface.co/Amanvir/LRS3_V_WER19.1/resolve/main/model.pth",
+          "sha256": "e740cef369abeabd0ba2c18e37a0661342e1d94d432d6caa77755a11821d8fe3",
+          "bytes": 1001908942
+        },
+        {
+          "name": "vsr.json",
+          "url": "https://huggingface.co/Amanvir/LRS3_V_WER19.1/resolve/main/model.json",
+          "sha256": "e062e8c58579f54cb51087e639e674781189809905db4162efe0fe1325356d4f",
+          "bytes": 5512
+        },
+        {
+          "name": "lm.pth",
+          "url": "https://huggingface.co/Amanvir/lm_en_subword/resolve/main/model.pth",
+          "sha256": "c75aa39020dec98f432c8689b145d3f4cc407d4daa90a0c64202386c34f83c18",
+          "bytes": 215076928
+        },
+        {
+          "name": "lm.json",
+          "url": "https://huggingface.co/Amanvir/lm_en_subword/resolve/main/model.json",
+          "sha256": "6e2d2004e4066af3e5a3d74c53b0d648fd53904da07178671d1cbe28a206d548",
+          "bytes": 951
+        },
+        {
+          "name": "face_detector.tflite",
+          "url": "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite",
+          "sha256": "b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f",
+          "bytes": 229746
+        },
+        {
+          "name": "face_landmarker.task",
+          "url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+          "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+          "bytes": 3758596
+        }
+      ]
+    },
+    "current_platform_verified": "macOS-27.0.1-arm64-arm-64bit",
+    "package_versions_verified_after_reboot": true
+  },
+  "capture_and_run_settings": {
+    "pairs": 3,
+    "order": [
+      [
+        "old",
+        "new"
+      ],
+      [
+        "new",
+        "old"
+      ],
+      [
+        "old",
+        "new"
+      ]
+    ],
+    "measured_replays_per_block": 2,
+    "discarded_warmups_per_fresh_process": 1,
+    "quiet_gate": "CPU idle >=70%, swapins <200 pages per sample; after 5 attempts proceed and retain load data",
+    "single_heavy_process": true,
+    "text_provider": "disabled in both arms; empty agent database",
+    "source_fps": 25,
+    "jpeg_quality": 90,
+    "max_edge": 800,
+    "mode": "live",
+    "endpoint": "finish",
+    "device": "cpu",
+    "threads": 4,
+    "fast_beam": 4,
+    "phrase_beam": 12,
+    "ctc_weight": 0.1,
+    "lm_weight": 0.3,
+    "detection_cache": true,
+    "connection": "localhost:8766, no tunnel or phone",
+    "clip_sha256": "3bb8cffd51399caaf0c97abcd32bcab3493b2878ffda73bd648490ea47c75cc0",
+    "capture_kind": "unknown reused diagnostic",
+    "verified_reference": null,
+    "pair_unit": "median of 2 replays in one fresh-process block; 3 paired blocks, 6 replays per arm",
+    "acceptance_threshold": "median capture-start-to-final ratio <=1.15 versus old code on this clip"
+  },
+  "thread_environment": {
+    "OMP_NUM_THREADS": null,
+    "OPENBLAS_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null,
+    "VECLIB_MAXIMUM_THREADS": null
+  },
+  "summary": {
+    "old": {
+      "replays": 6,
+      "latency_seconds": {
+        "first_draft_seconds": {
+          "n": 6,
+          "median": 2.097561249999899,
+          "p95": 2.2367511250001826,
+          "min": 2.0255919589999394,
+          "max": 2.2367511250001826
+        },
+        "final_from_start_seconds": {
+          "n": 6,
+          "median": 4.9735403749999705,
+          "p95": 5.675235124999972,
+          "min": 4.722104291999926,
+          "max": 5.675235124999972
+        },
+        "final_after_last_frame_seconds": {
+          "n": 6,
+          "median": 2.0135403749999705,
+          "p95": 2.715235124999972,
+          "min": 1.7621042919999264,
+          "max": 2.715235124999972
+        }
+      },
+      "predictions": [
+        "THE SUNRISE WOULD BE TOO SOON"
+      ],
+      "no_outputs": 0,
+      "errors": 0
+    },
+    "new": {
+      "replays": 6,
+      "latency_seconds": {
+        "first_draft_seconds": {
+          "n": 6,
+          "median": 1.9558481664998908,
+          "p95": 2.1325708330000452,
+          "min": 1.8439895419999175,
+          "max": 2.1325708330000452
+        },
+        "final_from_start_seconds": {
+          "n": 6,
+          "median": 4.532273333000035,
+          "p95": 5.127587458000107,
+          "min": 4.315108375000136,
+          "max": 5.127587458000107
+        },
+        "final_after_last_frame_seconds": {
+          "n": 6,
+          "median": 1.5722733330000347,
+          "p95": 2.1675874580001073,
+          "min": 1.3551083750001363,
+          "max": 2.1675874580001073
+        }
+      },
+      "predictions": [
+        "THE SUNRISE WOULD BE TOO SOON"
+      ],
+      "no_outputs": 0,
+      "errors": 0
+    }
+  },
+  "paired_block_results": [
+    {
+      "pair": 1,
+      "order": [
+        "old",
+        "new"
+      ],
+      "first_draft_seconds": {
+        "old": 2.1100094374999685,
+        "new": 1.8498123545000453,
+        "new_minus_old": -0.26019708299992317,
+        "ratio": 0.8766843984791765
+      },
+      "final_from_start_seconds": {
+        "old": 4.814049208499966,
+        "new": 4.328851229000065,
+        "new_minus_old": -0.48519797949990107,
+        "ratio": 0.8992120856090945
+      },
+      "final_after_last_frame_seconds": {
+        "old": 1.8540492084999665,
+        "new": 1.3688512290000654,
+        "new_minus_old": -0.48519797949990107,
+        "ratio": 0.7383036128299667
+      }
+    },
+    {
+      "pair": 2,
+      "order": [
+        "new",
+        "old"
+      ],
+      "first_draft_seconds": {
+        "old": 2.131171542000061,
+        "new": 2.0749352915000827,
+        "new_minus_old": -0.05623625049997827,
+        "ratio": 0.9736125180954689
+      },
+      "final_from_start_seconds": {
+        "old": 5.3575054794999915,
+        "new": 4.924770020500091,
+        "new_minus_old": -0.4327354589999004,
+        "ratio": 0.9192281817245501
+      },
+      "final_after_last_frame_seconds": {
+        "old": 2.3975054794999915,
+        "new": 1.964770020500091,
+        "new_minus_old": -0.4327354589999004,
+        "ratio": 0.8195059562115583
+      }
+    },
+    {
+      "pair": 3,
+      "order": [
+        "old",
+        "new"
+      ],
+      "first_draft_seconds": {
+        "old": 2.097561249999899,
+        "new": 1.9558481664998908,
+        "new_minus_old": -0.141713083500008,
+        "ratio": 0.9324391201925499
+      },
+      "final_from_start_seconds": {
+        "old": 4.980440103499859,
+        "new": 4.62258708349998,
+        "new_minus_old": -0.3578530199998795,
+        "ratio": 0.9281483136905092
+      },
+      "final_after_last_frame_seconds": {
+        "old": 2.020440103499859,
+        "new": 1.6625870834999796,
+        "new_minus_old": -0.3578530199998795,
+        "ratio": 0.8228836284827266
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "pair": 1,
+      "arm": "old",
+      "position_in_pair": 0,
+      "startup_seconds": 23.192204959000037,
+      "warmup_final_seconds": 4.683321332999981,
+      "load_check_passed_before_start": false,
+      "runs": [
+        {
+          "pair": 1,
+          "arm": "old",
+          "repetition": 1,
+          "first_draft_seconds": 2.1696754170000077,
+          "final_from_start_seconds": 4.9059941250000065,
+          "final_after_last_frame_seconds": 1.9459941250000066,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 49.65,
+          "load_check_passed_before_capture": false,
+          "load_average_before": [
+            5.97265625,
+            32.10595703125,
+            25.5517578125
+          ],
+          "swapin_pages_during_replay": 108,
+          "swapout_pages_during_replay": 21012,
+          "page_size_bytes": 16384
+        },
+        {
+          "pair": 1,
+          "arm": "old",
+          "repetition": 2,
+          "first_draft_seconds": 2.0503434579999293,
+          "final_from_start_seconds": 4.722104291999926,
+          "final_after_last_frame_seconds": 1.7621042919999264,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 53.9,
+          "load_check_passed_before_capture": false,
+          "load_average_before": [
+            6.412109375,
+            30.11962890625,
+            25.02490234375
+          ],
+          "swapin_pages_during_replay": 164,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "arm": "new",
+      "position_in_pair": 1,
+      "startup_seconds": 10.063079291999998,
+      "warmup_final_seconds": 4.62042033299997,
+      "load_check_passed_before_start": false,
+      "runs": [
+        {
+          "pair": 1,
+          "arm": "new",
+          "repetition": 1,
+          "first_draft_seconds": 1.8556351670001732,
+          "final_from_start_seconds": 4.315108375000136,
+          "final_after_last_frame_seconds": 1.3551083750001363,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 63.54,
+          "load_check_passed_before_capture": false,
+          "load_average_before": [
+            4.53125,
+            25.6142578125,
+            23.666015625
+          ],
+          "swapin_pages_during_replay": 4,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        },
+        {
+          "pair": 1,
+          "arm": "new",
+          "repetition": 2,
+          "first_draft_seconds": 1.8439895419999175,
+          "final_from_start_seconds": 4.3425940829999945,
+          "final_after_last_frame_seconds": 1.3825940829999945,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 60.95,
+          "load_check_passed_before_capture": false,
+          "load_average_before": [
+            4.0341796875,
+            24.1328125,
+            23.17919921875
+          ],
+          "swapin_pages_during_replay": 140,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "arm": "new",
+      "position_in_pair": 0,
+      "startup_seconds": 10.119765584000106,
+      "warmup_final_seconds": 4.890740292000146,
+      "load_check_passed_before_start": false,
+      "runs": [
+        {
+          "pair": 2,
+          "arm": "new",
+          "repetition": 1,
+          "first_draft_seconds": 2.1325708330000452,
+          "final_from_start_seconds": 4.721952583000075,
+          "final_after_last_frame_seconds": 1.7619525830000748,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 50.45,
+          "load_check_passed_before_capture": false,
+          "load_average_before": [
+            6.3359375,
+            21.3779296875,
+            22.2099609375
+          ],
+          "swapin_pages_during_replay": 100,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        },
+        {
+          "pair": 2,
+          "arm": "new",
+          "repetition": 2,
+          "first_draft_seconds": 2.01729975000012,
+          "final_from_start_seconds": 5.127587458000107,
+          "final_after_last_frame_seconds": 2.1675874580001073,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 62.72,
+          "load_check_passed_before_capture": false,
+          "load_average_before": [
+            5.5810546875,
+            20.234375,
+            21.7802734375
+          ],
+          "swapin_pages_during_replay": 784,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "arm": "old",
+      "position_in_pair": 1,
+      "startup_seconds": 11.282708624999941,
+      "warmup_final_seconds": 4.972848124999928,
+      "load_check_passed_before_start": false,
+      "runs": [
+        {
+          "pair": 2,
+          "arm": "old",
+          "repetition": 1,
+          "first_draft_seconds": 2.0255919589999394,
+          "final_from_start_seconds": 5.039775834000011,
+          "final_after_last_frame_seconds": 2.079775834000011,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 63.54,
+          "load_check_passed_before_capture": false,
+          "load_average_before": [
+            6.314453125,
+            17.71484375,
+            20.7265625
+          ],
+          "swapin_pages_during_replay": 296,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        },
+        {
+          "pair": 2,
+          "arm": "old",
+          "repetition": 2,
+          "first_draft_seconds": 2.2367511250001826,
+          "final_from_start_seconds": 5.675235124999972,
+          "final_after_last_frame_seconds": 2.715235124999972,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 59.25,
+          "load_check_passed_before_capture": false,
+          "load_average_before": [
+            5.29931640625,
+            16.74462890625,
+            20.30810546875
+          ],
+          "swapin_pages_during_replay": 88,
+          "swapout_pages_during_replay": 1712,
+          "page_size_bytes": 16384
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "arm": "old",
+      "position_in_pair": 0,
+      "startup_seconds": 9.138291249999838,
+      "warmup_final_seconds": 4.906753540999944,
+      "load_check_passed_before_start": true,
+      "runs": [
+        {
+          "pair": 3,
+          "arm": "old",
+          "repetition": 1,
+          "first_draft_seconds": 2.1285707499998807,
+          "final_from_start_seconds": 5.053575290999788,
+          "final_after_last_frame_seconds": 2.0935752909997882,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 71.11,
+          "load_check_passed_before_capture": true,
+          "load_average_before": [
+            4.3701171875,
+            15.06640625,
+            19.52880859375
+          ],
+          "swapin_pages_during_replay": 165,
+          "swapout_pages_during_replay": 5804,
+          "page_size_bytes": 16384
+        },
+        {
+          "pair": 3,
+          "arm": "old",
+          "repetition": 2,
+          "first_draft_seconds": 2.066551749999917,
+          "final_from_start_seconds": 4.90730491599993,
+          "final_after_last_frame_seconds": 1.94730491599993,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 70.83,
+          "load_check_passed_before_capture": true,
+          "load_average_before": [
+            3.8515625,
+            14.6025390625,
+            19.3115234375
+          ],
+          "swapin_pages_during_replay": 19,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        }
+      ]
+    },
+    {
+      "pair": 3,
+      "arm": "new",
+      "position_in_pair": 1,
+      "startup_seconds": 11.072603416999982,
+      "warmup_final_seconds": 4.9837598750000325,
+      "load_check_passed_before_start": false,
+      "runs": [
+        {
+          "pair": 3,
+          "arm": "new",
+          "repetition": 1,
+          "first_draft_seconds": 1.9546048329998484,
+          "final_from_start_seconds": 4.906163749999905,
+          "final_after_last_frame_seconds": 1.9461637499999052,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 70.23,
+          "load_check_passed_before_capture": true,
+          "load_average_before": [
+            4.3759765625,
+            13.265625,
+            18.576171875
+          ],
+          "swapin_pages_during_replay": 16,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        },
+        {
+          "pair": 3,
+          "arm": "new",
+          "repetition": 2,
+          "first_draft_seconds": 1.9570914999999331,
+          "final_from_start_seconds": 4.339010417000054,
+          "final_after_last_frame_seconds": 1.3790104170000541,
+          "last_frame_seconds": 2.96,
+          "prediction": "THE SUNRISE WOULD BE TOO SOON",
+          "accepted": true,
+          "auto_send_count": 1,
+          "pre_capture_cpu_idle_percent": 71.95,
+          "load_check_passed_before_capture": true,
+          "load_average_before": [
+            4.48291015625,
+            12.8583984375,
+            18.337890625
+          ],
+          "swapin_pages_during_replay": 28,
+          "swapout_pages_during_replay": 0,
+          "page_size_bytes": 16384
+        }
+      ]
+    }
+  ],
+  "paging_totals_measured_replays": {
+    "old": {
+      "swapin_pages": 840,
+      "swapout_pages": 28528
+    },
+    "new": {
+      "swapin_pages": 1072,
+      "swapout_pages": 0
+    }
+  },
+  "load_check_warnings": 13,
+  "accuracy_claim": null,
+  "median_final_regression_check": {
+    "new_to_old_median_final_ratio": 0.9112770765432987,
+    "within_15_percent": true,
+    "label": "no measurable regression on this clip"
+  }
+}

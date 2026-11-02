@@ -40,13 +40,15 @@ Recognition models were not trained for this project. Exact upstream revisions, 
 
 ## Measured results
 
-| Measure | Current evidence |
-| --- | --- |
-| First draft, median | **2.23 s** from replay start |
-| Final turn, median | **5.68 s** from replay start; **2.72 s** after the last supplied frame |
-| Recognition accuracy | Not measured; consented labeled recordings are pending |
+| Delivery interval | Old code median | Branch median |
+| --- | --- | --- |
+| Capture start to first draft | 2.10 s | **1.96 s** |
+| Capture start to final turn | 4.97 s | **4.53 s** |
+| Last supplied frame to final turn | 2.01 s | **1.57 s** |
 
-These existing timings are an **unpaired localhost diagnostic**: one reused clip, ten measured runs after warmup, Apple M1 / 8 GiB, CPU / four threads, explicit Finish at EOF. They exclude phone/network delay and agent replies. The paired old/new rerun is pending; no speed improvement is claimed. [Raw timings, exact environment and evidence limits](docs/BASELINE.md).
+**No measurable regression on this clip:** the branch meets the 15% median-final tolerance. Three alternating old/new pairs measured six replays per version after fresh-process warmups on Apple M1 / 8 GiB, CPU / four threads. This is a localhost replay with explicit Finish at EOF, excluding phone/network delay and agent replies. Paging and missed load targets are recorded alongside the results. [Exact environment, all runs and limits](docs/BASELINE.md).
+
+Recognition accuracy is **not measured**; consented labeled recordings are pending. The timing clip is reused diagnostic footage with an unverified intended transcript, so it is not an accuracy benchmark.
 
 ## 1. What it is
 
