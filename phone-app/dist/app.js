@@ -54,19 +54,21 @@ let visualTurns = false,
 let providerReady = false,
   providerVoice = false,
   voiceBusy = false,
+  voiceEndedAt = 0,
   overlayCaption = null;
 const assistBusy = new Set();
 const audio = createAudioEngine();
+function stopVoice() {
+  voiceEpoch++;
+  audio.stop();
+  voiceBusy = false;
+  refreshModelControls();
+}
 const agentUI = createAgentUI({
   requestAPI,
   getLatest: () => entries.at(-1),
   onSettings: () => openSettings(),
-  onStopAudio: () => {
-    voiceEpoch++;
-    audio.stop();
-    voiceBusy = false;
-    refreshModelControls();
-  },
+  onStopAudio: stopVoice,
   onLiveMode: (enabled) => {
     if (socket?.readyState === WebSocket.OPEN)
       socket.send(JSON.stringify({ type: 'conversation', enabled }));
@@ -455,6 +457,8 @@ function receive(event) {
     if (data.event === 'started') activeVisualTurn = data.turn_id;
     agentUI.speech(data);
   } else if (data.type === 'utterance') {
+    // Only words actually read interrupt a spoken reply; a smile or reaction does not.
+    if (data.text) stopVoice();
     const entry = {
       ...data,
       type: 'result',
@@ -549,7 +553,9 @@ function receive(event) {
     $('caption-overlay').hidden = true;
     overlayCaption = null;
     if (Number.isFinite(data.capture_end)) segmentStart = captureStart + data.capture_end * 1000;
-    if (!data.silent) status(data.message, 'error');
+    // Reacting to a reply while it plays is not a failed attempt to speak.
+    const nearReply = voiceBusy || Date.now() - voiceEndedAt < 4000;
+    if (!data.silent && !nearReply) status(data.message, 'error');
     else status('Listening for your next phrase.');
   } else if (data.type === 'guidance' || data.type === 'error') {
     if (data.type === 'error' && data.sequence == null) streamError = data.message;
@@ -1044,6 +1050,7 @@ async function playEntry(entry) {
     }
   } finally {
     if (epoch === voiceEpoch) voiceBusy = false;
+    voiceEndedAt = Date.now();
     refreshModelControls();
     renderCaptions();
   }
@@ -1051,7 +1058,7 @@ async function playEntry(entry) {
 // Browsers allow audio only after a user gesture, and replies arrive later, so unlock early.
 for (const type of ['pointerdown', 'keydown'])
   document.addEventListener(type, () => audio.unlock().catch(() => {}), { once: true });
-// Assistant replies are spoken; lip movement stops playback through onStopAudio.
+// Assistant replies are spoken; a new reading of your words stops playback.
 async function speakReply(job, { force = false } = {}) {
   // Speak for me says the user's own understood sentence; guesses wait for a tap.
   const forUser = job.purpose === 'speak';
@@ -1072,6 +1079,7 @@ async function speakReply(job, { force = false } = {}) {
     if (epoch === voiceEpoch) providerMessage(error.message, true);
   } finally {
     if (epoch === voiceEpoch) voiceBusy = false;
+    voiceEndedAt = Date.now();
     refreshModelControls();
   }
 }

@@ -136,7 +136,6 @@ export function createAgentUI({
   }
   $('agent-cancel-all').onclick = cancelAll;
   function speech(activity) {
-    if (activity.event === 'started') onStopAudio();
     userSpeaking = $('agent-live-toggle').checked && activity.speaking;
     if (!$('agent-live-toggle').checked) return;
     if (activity.event === 'started') {

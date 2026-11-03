@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+A spoken reply now stops only when a new reading of the user's words arrives, not on any lip movement, so smiling or reacting no longer cuts it off. Unread turns during or just after a reply are not reported as failures.
+
 Count only lip movement, not the closing pause, when deciding whether an unread turn was real speech. Brief reactions between sentences no longer show "I didn't catch that".
 
 Judge face size in pixels instead of share of frame. The old 28% rule refused faces the recognizer reads correctly; a 93 px face now reads, while faces under 85 px are still refused with guidance.

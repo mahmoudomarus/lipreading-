@@ -163,7 +163,8 @@ test('background UI renders per-job cancellation and speech only stops audio', a
   assert.match(elements.get('turn-state').textContent, /2 tasks running/);
   const before = calls.length;
   ui.speech({ event: 'started', speaking: true, available: true, turn_id: 99 });
-  assert.equal(stoppedAudio, 1);
+  // Lip movement alone (a smile, a reaction) must not cut off a spoken reply.
+  assert.equal(stoppedAudio, 0);
   assert.equal(calls.length, before);
   assert.deepEqual(
     jobs.map((job) => job.state),

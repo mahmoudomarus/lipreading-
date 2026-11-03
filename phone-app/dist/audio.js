@@ -1,4 +1,4 @@
-// Plays generated speech; stop() silences it as soon as the user starts speaking.
+// Plays generated speech; stop() silences it when a new reading of the user's words arrives.
 export function createAudioEngine() {
   let context;
   const sources = new Set();

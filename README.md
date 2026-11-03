@@ -211,7 +211,7 @@ Tasks survive closing the browser while the computer service remains running. On
 
 **Speak for me** turns the app into a voice for someone who cannot use theirs: each sentence you mouth goes through the same understanding step and is then said aloud in a generated voice, instead of being answered. The conversation shows it as **Said for you**, with **Say again**. A sentence the assistant is only guessing at is not spoken automatically; check it and press **Say it**.
 
-**Speak replies** (on by default when the model connection supports speech) reads each new assistant reply aloud with generated speech, up to the first 360 characters in whole sentences. Replies loaded from history when the page opens are not spoken. Moving your lips stops playback; it never cancels tasks. Switch it off in the conversation panel to read replies only. **Play latest caption with AI voice** in Settings reads your own predicted caption aloud instead, for speaking to someone nearby.
+**Speak replies** (on by default when the model connection supports speech) reads each new assistant reply aloud with generated speech, up to the first 360 characters in whole sentences. Replies loaded from history when the page opens are not spoken. Speaking over a reply stops playback once your words are read; brief movement such as a smile or reaction does not, and it never cancels tasks. A turn that yields no words while a reply is playing, or just after, is not reported as a failed reading. Switch it off in the conversation panel to read replies only. **Play latest caption with AI voice** in Settings reads your own predicted caption aloud instead, for speaking to someone nearby.
 
 ## 10. Measuring accuracy
 
