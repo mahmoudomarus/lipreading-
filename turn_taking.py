@@ -3,9 +3,12 @@
 import math
 from collections import deque
 
+# Stillness that ends a turn; a finished turn's endpoint includes this wait.
+PAUSE_SECONDS = 1.05
+
 
 class LipActivity:
-    def __init__(self, pause_seconds=1.05, movement_threshold=0.008, smoothing=0.6):
+    def __init__(self, pause_seconds=PAUSE_SECONDS, movement_threshold=0.008, smoothing=0.6):
         self.pause_seconds = pause_seconds
         self.threshold = movement_threshold
         self.smoothing = smoothing

@@ -176,6 +176,10 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.session.utterances.start(2, 9.0)
         await self.session.finish_turn(2, 9.4)
         self.assertTrue(self.events[1]["silent"])
+        # A live false start: 1.2 s from start to stop is mostly the closing pause.
+        self.session.utterances.start(3, 40.10)
+        await self.session.finish_turn(3, 41.30)
+        self.assertTrue(self.events[2]["silent"])
 
     async def test_newer_turn_does_not_drop_a_finished_reading(self):
         self.session.active_turn = 2

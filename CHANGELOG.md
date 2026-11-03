@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Count only lip movement, not the closing pause, when deciding whether an unread turn was real speech. Brief reactions between sentences no longer show "I didn't catch that".
+
 Judge face size in pixels instead of share of frame. The old 28% rule refused faces the recognizer reads correctly; a 93 px face now reads, while faces under 85 px are still refused with guidance.
 
 Add an understanding step: the planner first reconstructs the sentence the user most likely said, with a certainty rating, shown beside the raw lip reading, and answers that sentence. Add Speak for me, which says the understood sentence aloud instead of answering it.

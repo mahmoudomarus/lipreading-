@@ -22,7 +22,7 @@ from config import (
 from engine import CaptureError, NoSpeech, decode_frame
 from recognition_guard import RecognitionGuard, review_reason
 from stream_buffer import StreamBuffer
-from turn_taking import Utterances
+from turn_taking import PAUSE_SECONDS, Utterances
 
 log = logging.getLogger("lipread")
 
@@ -118,7 +118,9 @@ class StreamSession:
         turn = self.utterances.turns.get(turn_id)
         if turn and turn["sent"]:
             return
-        spoke = bool(turn) and endpoint - turn["start"] >= UNREAD_TURN_SECONDS
+        # The endpoint includes the closing pause, so only time spent moving counts as speaking.
+        moved = endpoint - turn["start"] - PAUSE_SECONDS if turn else 0
+        spoke = moved >= UNREAD_TURN_SECONDS
         result = self.utterances.finish(turn_id, endpoint)
         if result:
             if self.vocabulary:
